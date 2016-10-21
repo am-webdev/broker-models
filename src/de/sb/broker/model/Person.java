@@ -8,6 +8,9 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import javax.persistence.Table;
+
+@Table(name="Person", schema="_s0545840__brokerDB")
 public class Person extends BaseEntity {
 	
 	private String alias;

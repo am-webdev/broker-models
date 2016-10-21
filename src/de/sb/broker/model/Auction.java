@@ -6,6 +6,9 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
+import javax.persistence.Table;
+
+@Table(name="Auction", schema="_s0545840__brokerDB")
 public class Auction extends BaseEntity {
 	private String title;
 	private short unitCount;

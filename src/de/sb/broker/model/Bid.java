@@ -1,5 +1,8 @@
 package de.sb.broker.model;
 
+import javax.persistence.Table;
+
+@Table(name="Bid", schema="_s0545840__brokerDB")
 public class Bid extends BaseEntity {
 	private long price; 		// in cents
 	private Auction auction;

@@ -1,5 +1,8 @@
 package de.sb.broker.model;
 
+import javax.persistence.Table;
+
+@Table(name="BaseEntity", schema="_s0545840__brokerDB")
 public class BaseEntity implements Comparable<BaseEntity> {
 
 	private long identity;
