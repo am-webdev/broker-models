@@ -4,7 +4,9 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 public class Person extends BaseEntity {
 	
@@ -14,8 +16,8 @@ public class Person extends BaseEntity {
 	private Name name;
 	private Address address;
 	private Contact contact;
-	private List<Auction> auctions;
-	private List<Bid> bids;
+	private HashSet<Auction> auctions;
+	private HashSet<Bid> bids;
 	
 	public static enum Group {
 		ADMIN, USER
@@ -27,8 +29,8 @@ public class Person extends BaseEntity {
 		this.group = Group.USER;
 		this.address = null;
 		this.contact = null;
-		this.auctions = new ArrayList<Auction>();
-		this.bids = new ArrayList<Bid>();
+		this.auctions = new HashSet<Auction>();
+		this.bids = new HashSet<Bid>();
 	}
 	
 	public static byte[] passwordHash(String password) {
@@ -92,11 +94,11 @@ public class Person extends BaseEntity {
 		this.contact = contact;
 	}
 
-	public List<Auction> getAuctions() {
+	public HashSet<Auction> getAuctions() {
 		return auctions;
 	}
 
-	public List<Bid> getBids() {
+	public HashSet<Bid> getBids() {
 		return bids;
 	}
 	
