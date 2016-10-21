@@ -12,7 +12,7 @@ public class Bid extends BaseEntity {
 	public Bid(Auction auction, Person bidder) {
 		this.auction = auction;
 		this.bidder = bidder;
-		this.price = 0;
+		this.price = auction == null ? 1: auction.getAskingPrice();
 	}
 	
 	public Auction getAuction() {
@@ -20,7 +20,7 @@ public class Bid extends BaseEntity {
 	}
 	
 	public long getAuctionReference() {
-		return this.auction.getIdentity();
+		return this.auction == null ? 0: getIdentity();
 		
 	}
 	
@@ -30,6 +30,15 @@ public class Bid extends BaseEntity {
 	}
 	
 	public long getBidderReference(){
-		return this.bidder.getIdentity();
+		return this.bidder == null ? 0: getIdentity();
 	}
+
+	public long getPrice() {
+		return price;
+	}
+
+	public void setPrice(long price) {
+		this.price = price;
+	}
+	
 }

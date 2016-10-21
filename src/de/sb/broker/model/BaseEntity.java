@@ -5,25 +5,10 @@ public class BaseEntity implements Comparable<BaseEntity> {
 	private long identity;
 	private int version;
 	private long creationTimeStamp;
-	
-	// TODO Constructor needed?
 
 	@Override
 	public int compareTo(BaseEntity o) {
-		int rtn = 0;
-		if (this.identity == o.identity) {
-			rtn = 0;
-		}
-		
-		if (this.identity > o.identity) {
-			rtn = 1;
-		}
-		
-		if (this.identity < o.identity) {
-			rtn = -1;
-		}
-		
-		return rtn;
+		return Long.compare(this.identity, o.identity);
 	}
 
 	public long getIdentity() {
@@ -32,6 +17,10 @@ public class BaseEntity implements Comparable<BaseEntity> {
 
 	public int getVersion() {
 		return version;
+	}	
+
+	public void setVersion(int version) {
+		this.version = version;
 	}
 
 	public long getCreationTimeStamp() {
