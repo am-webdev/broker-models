@@ -8,18 +8,29 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import javax.persistence.FetchType;
-import javax.persistence.OneToMany;
-import javax.persistence.Table;
+import javax.persistence.*;
 
+@Entity
 @Table(name="Person", schema="_s0545840__brokerDB")
 public class Person extends BaseEntity {
 	
+	@Column(name = "alias")
 	private String alias;
+	
+	@Column(name = "passwordHash")
 	private byte[] passwordHash;
+	
+	@Column(name = "groupAlias")
+	@Enumerated(EnumType.STRING)
 	private Group group;
+
+	@Embedded
 	private Name name;
+
+	@Embedded
 	private Address address;
+	
+	@Embedded
 	private Contact contact;
 	
 	@OneToMany(fetch = FetchType.LAZY, mappedBy = "seller")
