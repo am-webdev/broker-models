@@ -8,13 +8,26 @@ import java.util.Set;
 
 import javax.persistence.*;
 
+@Entity
 @Table(name="Auction", schema="_s0545840__brokerDB")
 public class Auction extends BaseEntity {
+	@Column(name = "title")
 	private String title;
+	
+	@Column(name = "unitCount")
 	private short unitCount;
+	
+	@Column(name = "askingPrice")
 	private long askingPrice;
+	
+	@Column(name = "closureTimestamp")
 	private long closureTimestamp; 		// in millisec since 1970-01-01 00-00-00-000
+	
+	@Column(name = "description")
 	private String description;
+	
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "sellerReference")
 	private Person seller;
 	
 	@OneToMany(fetch = FetchType.LAZY, mappedBy = "auction")

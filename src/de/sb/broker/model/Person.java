@@ -21,6 +21,8 @@ public class Person extends BaseEntity {
 	private Name name;
 	private Address address;
 	private Contact contact;
+	
+	@OneToMany(fetch = FetchType.LAZY, mappedBy = "seller")
 	private HashSet<Auction> auctions;
 	
 	@OneToMany(fetch = FetchType.LAZY, mappedBy = "bidder")
