@@ -1,7 +1,14 @@
 package de.sb.broker.model;
 
+import javax.persistence.*;
+
+@Embeddable
+@Table(name="Person", schema="_s0545840__brokerDB")
 public class Name {
+
+	@Column(name = "familyName")
 	private String family;
+	@Column(name = "givenName")
 	private String given;
 	
 	public String getFamily() {
