@@ -6,7 +6,7 @@ import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Table;
 
-@Entity
+@Entity(name = "BaseEntity")
 @Table(name="BaseEntity", schema="_s0545840__brokerDB")
 public class BaseEntity implements Comparable<BaseEntity> {
 
