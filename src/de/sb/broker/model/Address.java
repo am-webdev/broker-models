@@ -1,9 +1,17 @@
 package de.sb.broker.model;
 
+import javax.persistence.Column;
+import javax.persistence.*;
+
+@Embeddable
+@Table(name="Person", schema="_s0545840__brokerDB")
 public class Address {
 
+	@Column(name = "street")
 	private String street;
+	@Column(name = "postCode")
 	private String postCode;
+	@Column(name = "city")
 	private String city;
 	
 	public String getStreet() {
