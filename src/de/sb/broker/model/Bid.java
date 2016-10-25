@@ -7,7 +7,7 @@ import javax.persistence.*;
 @PrimaryKeyJoinColumn(referencedColumnName = "identiy")
 public class Bid extends BaseEntity {
 	
-	@Column(name = "price")
+	@Column(name = "price", updatable=true, nullable=false, insertable=true)
 	private long price; 		// in cents, min: 1  max: Long.max
 	
 	@ManyToOne(fetch = FetchType.LAZY)
