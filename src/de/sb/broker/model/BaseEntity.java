@@ -1,19 +1,25 @@
 package de.sb.broker.model;
 
 import javax.persistence.Column;
+import javax.persistence.DiscriminatorColumn;
 import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
+import javax.persistence.Id;
+import javax.persistence.Inheritance;
+import javax.persistence.InheritanceType;
 import javax.persistence.Table;
 
-@Entity(name = "BaseEntity")
+@Entity()
 @Table(name="BaseEntity", schema="_s0545840__brokerDB")
+@Inheritance(strategy = InheritanceType.JOINED)
+@DiscriminatorColumn(name = "discriminator")
 public class BaseEntity implements Comparable<BaseEntity> {
 
 	/*   Attributes   */
 	/* ************** */
-
-	@Column(name = "identity", nullable = false)
+	@Id
+	@Column(name = "identity")
     @GeneratedValue(strategy = GenerationType.IDENTITY)
 	private long identity;
 	

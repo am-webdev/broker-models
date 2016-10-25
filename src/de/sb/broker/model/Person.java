@@ -8,6 +8,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import javax.persistence.FetchType;
+import javax.persistence.OneToMany;
 import javax.persistence.Table;
 
 @Table(name="Person", schema="_s0545840__brokerDB")
@@ -20,6 +22,8 @@ public class Person extends BaseEntity {
 	private Address address;
 	private Contact contact;
 	private HashSet<Auction> auctions;
+	
+	@OneToMany(fetch = FetchType.LAZY, mappedBy = "bidder")
 	private HashSet<Bid> bids;
 	
 	public static enum Group {

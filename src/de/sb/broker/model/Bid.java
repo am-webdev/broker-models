@@ -1,11 +1,21 @@
 package de.sb.broker.model;
 
-import javax.persistence.Table;
+import javax.persistence.*;
 
+@Entity()
 @Table(name="Bid", schema="_s0545840__brokerDB")
+@PrimaryKeyJoinColumn(referencedColumnName = "identiy")
 public class Bid extends BaseEntity {
-	private long price; 		// in cents
+	
+	@Column(name = "price")
+	private long price; 		// in cents, min: 1  max: Long.max
+	
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "auctionIdentity")
 	private Auction auction;
+	
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "personIdentity")
 	private Person bidder;
 	
 	protected Bid() {

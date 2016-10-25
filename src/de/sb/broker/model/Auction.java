@@ -6,7 +6,7 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
-import javax.persistence.Table;
+import javax.persistence.*;
 
 @Table(name="Auction", schema="_s0545840__brokerDB")
 public class Auction extends BaseEntity {
@@ -16,6 +16,8 @@ public class Auction extends BaseEntity {
 	private long closureTimestamp; 		// in millisec since 1970-01-01 00-00-00-000
 	private String description;
 	private Person seller;
+	
+	@OneToMany(fetch = FetchType.LAZY, mappedBy = "auction")
 	private Set<Bid> bids;
 	
 	protected Auction() {
