@@ -11,19 +11,19 @@ import javax.persistence.*;
 @Entity
 @Table(name="Auction", schema="_s0545840__brokerDB")
 public class Auction extends BaseEntity {
-	@Column(name = "title")
+	@Column(name = "title", updatable=true, nullable=false, insertable=true)
 	private String title;
 	
-	@Column(name = "unitCount")
+	@Column(name = "unitCount", updatable=true, nullable=false, insertable=true)
 	private short unitCount;
 	
-	@Column(name = "askingPrice")
+	@Column(name = "askingPrice", updatable=true, nullable=false, insertable=true)
 	private long askingPrice;
 	
-	@Column(name = "closureTimestamp")
+	@Column(name = "closureTimestamp", updatable=true, nullable=false, insertable=true)
 	private long closureTimestamp; 		// in millisec since 1970-01-01 00-00-00-000
 	
-	@Column(name = "description")
+	@Column(name = "description", updatable=true, nullable=false, insertable=true)
 	private String description;
 	
 	@ManyToOne(fetch = FetchType.LAZY)

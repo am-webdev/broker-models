@@ -7,11 +7,11 @@ import javax.persistence.*;
 @Table(name="Person", schema="_s0545840__brokerDB")
 public class Address {
 
-	@Column(name = "street")
+	@Column(name = "street", updatable=true, nullable=true, insertable=true)
 	private String street;
-	@Column(name = "postCode")
+	@Column(name = "postCode", updatable=true, nullable=true, insertable=true)
 	private String postCode;
-	@Column(name = "city")
+	@Column(name = "city", updatable=true, nullable=false, insertable=true)
 	private String city;
 	
 	public String getStreet() {

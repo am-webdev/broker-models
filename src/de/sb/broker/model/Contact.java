@@ -5,10 +5,10 @@ import javax.persistence.*;
 @Embeddable
 @Table(name="Person", schema="_s0545840__brokerDB")
 public class Contact {
-	@Column(name = "email")
+	@Column(name = "email", updatable=true, nullable=false, insertable=true)
 	private String email;
 	
-	@Column(name = "phone")
+	@Column(name = "phone", updatable=true, nullable=true, insertable=true)
 	private String phone;
 	
 	public String getEmail() {

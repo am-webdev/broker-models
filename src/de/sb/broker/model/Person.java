@@ -14,13 +14,13 @@ import javax.persistence.*;
 @Table(name="Person", schema="_s0545840__brokerDB")
 public class Person extends BaseEntity {
 	
-	@Column(name = "alias")
+	@Column(name = "alias", updatable=true, nullable=false, insertable=true)
 	private String alias;
 	
-	@Column(name = "passwordHash")
+	@Column(name = "passwordHash", updatable=true, nullable=false, insertable=true)
 	private byte[] passwordHash;
 	
-	@Column(name = "groupAlias")
+	@Column(name = "groupAlias", updatable=true, nullable=false, insertable=true)
 	@Enumerated(EnumType.STRING)
 	private Group group;
 

@@ -6,9 +6,9 @@ import javax.persistence.*;
 @Table(name="Person", schema="_s0545840__brokerDB")
 public class Name {
 
-	@Column(name = "familyName")
+	@Column(name = "familyName", updatable=true, nullable=false, insertable=true)
 	private String family;
-	@Column(name = "givenName")
+	@Column(name = "givenName", updatable=true, nullable=false, insertable=true)
 	private String given;
 	
 	public String getFamily() {
