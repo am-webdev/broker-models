@@ -1,13 +1,19 @@
 package de.sb.broker.model;
 
 import javax.persistence.*;
+import javax.validation.constraints.Size;
+
+import de.sb.java.validation.Inequal;
 
 @Entity()
 @Table(name="Bid", schema="_s0545840__brokerDB")
 @PrimaryKeyJoinColumn(referencedColumnName = "identiy")
+@Inequal(leftAccessPath = "price", rightAccessPath = { "auction", "askingPrice" } , operator = Inequal.Operator.GREATER_EQUAL )
+@Inequal(leftAccessPath = { "bidder" , "identity" }, rightAccessPath = { "auction", "seller" , "identity" } , operator = Inequal.Operator.NOT_EQUAL)
 public class Bid extends BaseEntity {
 	
-	@Column(name = "price")
+	@Column(name = "price", updatable=true, nullable=false, insertable=true)
+	@Size(min = 1, message = "The price needs to start at 1ct")
 	private long price; 		// in cents, min: 1  max: Long.max
 	
 	@ManyToOne(fetch = FetchType.LAZY)

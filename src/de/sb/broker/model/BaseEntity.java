@@ -9,6 +9,8 @@ import javax.persistence.Id;
 import javax.persistence.Inheritance;
 import javax.persistence.InheritanceType;
 import javax.persistence.Table;
+import javax.validation.constraints.Min;
+import javax.validation.constraints.NotNull;
 
 @Entity()
 @Table(name="BaseEntity", schema="_s0545840__brokerDB")
@@ -19,14 +21,17 @@ public class BaseEntity implements Comparable<BaseEntity> {
 	/*   Attributes   */
 	/* ************** */
 	@Id
-	@Column(name = "identity")
+	@Column(name = "identity", updatable=false, nullable=false, insertable=true)
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+	@NotNull
 	private long identity;
 	
-	@Column(name = "version")
+	@Column(name = "version", updatable=true, nullable=false, insertable=true)
+	@NotNull
 	private int version;
 	
-	@Column(name = "creationTimestamp")
+	@Column(name = "creationTimestamp", updatable=false, nullable=false, insertable=true)
+	@NotNull
 	private long creationTimeStamp;
 
 	/*   Methods   */

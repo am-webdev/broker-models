@@ -7,23 +7,31 @@ import java.util.Map;
 import java.util.Set;
 
 import javax.persistence.*;
+import javax.validation.constraints.*;
+
+import de.sb.java.validation.Inequal;
 
 @Entity
 @Table(name="Auction", schema="_s0545840__brokerDB")
+@Inequal(leftAccessPath = { "closureTimestamp" }, rightAccessPath = { "creationTimestamp" }, operator = Inequal.Operator.GREATER)
 public class Auction extends BaseEntity {
-	@Column(name = "title")
+	@Column(name = "title", updatable=true, nullable=false, insertable=true)
+	@Size(min = 1, max = 255, message = "The title should contain at least 1 and maximal 255 characters")
 	private String title;
 	
-	@Column(name = "unitCount")
+	@Column(name = "unitCount", updatable=true, nullable=false, insertable=true)
+	@Size(min = 1, max = 99999, message = "The unit count needs to be between 1 and 99999")
 	private short unitCount;
 	
-	@Column(name = "askingPrice")
+	@Column(name = "askingPrice", updatable=true, nullable=false, insertable=true)
+	@Size(min = 1, message = "The price needs to start at 1ct")
 	private long askingPrice;
 	
-	@Column(name = "closureTimestamp")
+	@Column(name = "closureTimestamp", updatable=true, nullable=false, insertable=true)
 	private long closureTimestamp; 		// in millisec since 1970-01-01 00-00-00-000
 	
-	@Column(name = "description")
+	@Column(name = "description", updatable=true, nullable=false, insertable=true)
+	@Size(min = 1, max = 8189, message = "An auction's name must contain between 1 and 8189 characters")
 	private String description;
 	
 	@ManyToOne(fetch = FetchType.LAZY)
