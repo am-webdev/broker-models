@@ -25,6 +25,7 @@ import de.sb.java.TypeMetadata;
  * <li>DELETE entities/{identity}: Deletes the entity matching the given identity.</li>
  * </ul>
  */
+@SuppressWarnings("deprecation")
 @Path("entities")
 @TypeMetadata(copyright = "2013-2015 Sascha Baumeister, all rights reserved", version = "1.0.0", authors = "Sascha Baumeister")
 public class EntityService {
