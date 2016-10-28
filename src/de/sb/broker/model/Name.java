@@ -4,9 +4,10 @@ import javax.persistence.*;
 import javax.validation.constraints.Size;
 
 @Embeddable
-@Table(name="Person", schema="_s0545840__brokerDB")
 public class Name {
-
+	
+	// TODO messages entfernen
+	
 	@Column(name = "familyName", updatable=true, nullable=false, insertable=true)
 	@Size(min = 1, max = 31, message = "An person's family name must contain between 1 and 31 characters")
 	private String family;

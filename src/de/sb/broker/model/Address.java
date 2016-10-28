@@ -5,7 +5,6 @@ import javax.validation.constraints.Size;
 import javax.persistence.*;
 
 @Embeddable
-@Table(name="Person", schema="_s0545840__brokerDB")
 public class Address {
 
 	@Column(name = "street", updatable=true, nullable=true, insertable=true)

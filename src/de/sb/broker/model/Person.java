@@ -4,20 +4,26 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.HashSet;
+import java.util.Set;
 
 import javax.persistence.Column;
+import javax.persistence.DiscriminatorValue;
 import javax.persistence.Embedded;
 import javax.persistence.Entity;
 import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
 import javax.persistence.FetchType;
 import javax.persistence.OneToMany;
+import javax.persistence.PrimaryKeyJoinColumn;
 import javax.persistence.Table;
 import javax.validation.Valid;
+import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Size;
 
 @Entity
 @Table(name="Person", schema="_s0545840__brokerDB")
+@PrimaryKeyJoinColumn(name = "personIdentity")	// TODO bei allen nach ziehen
+@DiscriminatorValue("Person")					// TODO bei allen nach ziehen
 public class Person extends BaseEntity {
 	
 	@Column(name = "alias", updatable=true, nullable=false, insertable=true)
@@ -34,21 +40,24 @@ public class Person extends BaseEntity {
 
 	@Embedded
 	@Valid 
+	@NotNull
 	private Name name;
 
 	@Embedded
 	@Valid 
+	@NotNull
 	private Address address;
 	
 	@Embedded
 	@Valid 
+	@NotNull
 	private Contact contact;
 	
 	@OneToMany(fetch = FetchType.LAZY, mappedBy = "seller")
-	private HashSet<Auction> auctions;
+	private Set<Auction> auctions;
 	
 	@OneToMany(fetch = FetchType.LAZY, mappedBy = "bidder")
-	private HashSet<Bid> bids;
+	private Set<Bid> bids;
 	
 	public static enum Group {
 		ADMIN, USER
@@ -125,11 +134,11 @@ public class Person extends BaseEntity {
 		this.contact = contact;
 	}
 
-	public HashSet<Auction> getAuctions() {
+	public Set<Auction> getAuctions() {
 		return auctions;
 	}
 
-	public HashSet<Bid> getBids() {
+	public Set<Bid> getBids() {
 		return bids;
 	}
 	
