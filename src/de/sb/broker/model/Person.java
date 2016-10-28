@@ -9,15 +9,19 @@ import java.util.List;
 import java.util.Set;
 
 import javax.persistence.*;
+import javax.validation.Valid;
+import javax.validation.constraints.*;
 
 @Entity
 @Table(name="Person", schema="_s0545840__brokerDB")
 public class Person extends BaseEntity {
 	
 	@Column(name = "alias", updatable=true, nullable=false, insertable=true)
+	@Size(min = 1, max = 16, message = "An person's alias must contain between 1 and 16 characters")
 	private String alias;
 	
 	@Column(name = "passwordHash", updatable=true, nullable=false, insertable=true)
+	@Size(min = 32, max = 32, message = "The passwordhash has to contain 32 bytes")
 	private byte[] passwordHash;
 	
 	@Column(name = "groupAlias", updatable=true, nullable=false, insertable=true)
@@ -25,12 +29,15 @@ public class Person extends BaseEntity {
 	private Group group;
 
 	@Embedded
+	@Valid 
 	private Name name;
 
 	@Embedded
+	@Valid 
 	private Address address;
 	
 	@Embedded
+	@Valid 
 	private Contact contact;
 	
 	@OneToMany(fetch = FetchType.LAZY, mappedBy = "seller")
