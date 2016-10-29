@@ -16,7 +16,7 @@ import de.sb.java.validation.Inequal;
 
 @Entity
 @Table(name="Auction", schema="_s0545840__brokerDB")
-@Inequal(leftAccessPath = { "closureTimestamp" }, rightAccessPath = { "creationTimestamp" }, operator = Inequal.Operator.GREATER)
+@Inequal(leftAccessPath = "closureTimestamp", rightAccessPath = "creationTimestamp", operator = Inequal.Operator.GREATER)
 public class Auction extends BaseEntity {
 	@Column(name = "title", updatable=true, nullable=false, insertable=true)
 	@Size(min = 1, max = 255, message = "The title should contain at least 1 and maximal 255 characters")
