@@ -1,6 +1,7 @@
 *.class
 
-src/META-INF/persistence.xml
+src/META-INF/
+bin/META-INF/
 
 # Mobile Tools for Java (J2ME)
 .mtj.tmp/
