@@ -4,11 +4,13 @@ import java.util.HashSet;
 import java.util.Set;
 
 import javax.persistence.Column;
+import javax.persistence.DiscriminatorValue;
 import javax.persistence.Entity;
 import javax.persistence.FetchType;
 import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
 import javax.persistence.OneToMany;
+import javax.persistence.PrimaryKeyJoinColumn;
 import javax.persistence.Table;
 import javax.validation.constraints.Size;
 
@@ -16,6 +18,8 @@ import de.sb.java.validation.Inequal;
 
 @Entity
 @Table(name="Auction", schema="_s0545840__brokerDB")
+@PrimaryKeyJoinColumn(name = "auctionIdentity")
+@DiscriminatorValue("Auction")			
 @Inequal(leftAccessPath = "closureTimestamp", rightAccessPath = "creationTimestamp", operator = Inequal.Operator.GREATER)
 public class Auction extends BaseEntity {
 	@Column(name = "title", updatable=true, nullable=false, insertable=true)

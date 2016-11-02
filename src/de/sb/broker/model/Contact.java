@@ -7,12 +7,12 @@ import javax.validation.constraints.Size;
 @Embeddable
 public class Contact {
 	@Column(name = "email", updatable=true, nullable=false, insertable=true)
-	@Size(min = 1, max = 63, message = "An person's email address must contain between 1 and 31 characters")
-	@Pattern(regexp = "^[\\w|\\d|.]+@[\\w|\\d|.]+$", message="A vaild email address is required.") //TODO @ und min. ein zeichen davor und danach
+	@Size(min = 1, max = 63)
+	@Pattern(regexp = "^[\\s\\S]+@[\\s\\S]+$", message="A vaild email address is required.") 
 	private String email;
 	
 	@Column(name = "phone", updatable=true, nullable=true, insertable=true)
-	@Size(min = 1, max = 31, message = "An person's phone number name must contain between 1 and 31 characters")
+	@Size(min = 1, max = 31)
 	private String phone;
 	
 	public String getEmail() {

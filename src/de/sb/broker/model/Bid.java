@@ -7,7 +7,8 @@ import de.sb.java.validation.Inequal;
 
 @Entity()
 @Table(name="Bid", schema="_s0545840__brokerDB")
-@PrimaryKeyJoinColumn(referencedColumnName = "identiy")
+@PrimaryKeyJoinColumn(name = "bidIdentity")
+@DiscriminatorValue("Bid")			
 @Inequal(leftAccessPath = "price", rightAccessPath = { "auction", "askingPrice" } , operator = Inequal.Operator.GREATER_EQUAL )
 @Inequal(leftAccessPath = { "bidder" , "identity" }, rightAccessPath = { "auction", "seller" , "identity" } , operator = Inequal.Operator.NOT_EQUAL)
 public class Bid extends BaseEntity {
