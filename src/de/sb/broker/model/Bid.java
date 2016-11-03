@@ -1,6 +1,7 @@
 package de.sb.broker.model;
 
 import javax.persistence.*;
+import javax.validation.constraints.Min;
 import javax.validation.constraints.Size;
 
 import de.sb.java.validation.Inequal;
@@ -13,7 +14,7 @@ import de.sb.java.validation.Inequal;
 public class Bid extends BaseEntity {
 	
 	@Column(name = "price", updatable=true, nullable=false, insertable=true)
-	@Size(min = 1, message = "The price needs to start at 1ct")
+	@Min(1)
 	private long price; 		// in cents, min: 1  max: Long.max
 	
 	@ManyToOne(fetch = FetchType.LAZY)

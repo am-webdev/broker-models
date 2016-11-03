@@ -10,6 +10,8 @@ import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
 import javax.persistence.OneToMany;
 import javax.persistence.Table;
+import javax.validation.constraints.Max;
+import javax.validation.constraints.Min;
 import javax.validation.constraints.Size;
 
 import de.sb.java.validation.Inequal;
@@ -23,11 +25,12 @@ public class Auction extends BaseEntity {
 	private String title;
 	
 	@Column(name = "unitCount", updatable=true, nullable=false, insertable=true)
-	@Size(min = 1, max = 99999, message = "The unit count needs to be between 1 and 99999")
+	@Min(1)
+	@Max(99999)
 	private short unitCount;
 	
 	@Column(name = "askingPrice", updatable=true, nullable=false, insertable=true)
-	@Size(min = 1, message = "The price needs to start at 1ct")
+	@Min(value = 1)
 	private long askingPrice;
 	
 	@Column(name = "closureTimestamp", updatable=true, nullable=false, insertable=true)
