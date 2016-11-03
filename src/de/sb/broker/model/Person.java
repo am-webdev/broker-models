@@ -22,8 +22,8 @@ import javax.validation.constraints.Size;
 
 @Entity
 @Table(name="Person", schema="_s0545840__brokerDB")
-@PrimaryKeyJoinColumn(name = "personIdentity")	// TODO bei allen nach ziehen
-@DiscriminatorValue("Person")					// TODO bei allen nach ziehen
+@PrimaryKeyJoinColumn(name = "personIdentity")	
+@DiscriminatorValue("Person")					
 public class Person extends BaseEntity {
 	
 	@Column(name = "alias", updatable=true, nullable=false, insertable=true)

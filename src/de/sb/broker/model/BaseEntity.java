@@ -3,18 +3,22 @@ package de.sb.broker.model;
 import javax.persistence.Column;
 import javax.persistence.DiscriminatorColumn;
 import javax.persistence.DiscriminatorType;
+import javax.persistence.DiscriminatorValue;
 import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
 import javax.persistence.Inheritance;
 import javax.persistence.InheritanceType;
+import javax.persistence.PrimaryKeyJoinColumn;
 import javax.persistence.Table;
-import javax.validation.constraints.NotNull;
+import javax.persistence.Version;
 
 @Entity
 @Table(name="BaseEntity", schema="_s0545840__brokerDB")
 @Inheritance(strategy = InheritanceType.JOINED)
+@PrimaryKeyJoinColumn(name = "identity")
+@DiscriminatorValue("BaseEntity")			
 @DiscriminatorColumn(name = "discriminator", discriminatorType = DiscriminatorType.STRING)  
 public class BaseEntity implements Comparable<BaseEntity> {
 
@@ -26,7 +30,7 @@ public class BaseEntity implements Comparable<BaseEntity> {
 	private long identity;
 	
 	@Column(name = "version", updatable=true, nullable=false, insertable=true)
-	// TODO ?? @Version
+	@Version
 	private int version;
 	
 	@Column(name = "creationTimestamp", updatable=false, nullable=false, insertable=true)

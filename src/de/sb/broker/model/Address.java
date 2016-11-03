@@ -8,15 +8,15 @@ import javax.persistence.*;
 public class Address {
 
 	@Column(name = "street", updatable=true, nullable=true, insertable=true)
-	@Size(min = 0, max = 63, message = "An person's street must contain between 0 and 63 characters")
+	@Size(min = 0, max = 63)
 	private String street;
 	
 	@Column(name = "postCode", updatable=true, nullable=true, insertable=true)
-	@Size(min = 0, max = 15, message = "An person's post code must contain between 0 and 15 characters")
+	@Size(min = 0, max = 15)
 	private String postCode;
 	
 	@Column(name = "city", updatable=true, nullable=false, insertable=true)
-	@Size(min = 1, max = 63, message = "An person's city name must contain between 1 and 63 characters")
+	@Size(min = 1, max = 63)
 	private String city;
 	
 	public String getStreet() {
