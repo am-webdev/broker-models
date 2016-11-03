@@ -8,7 +8,7 @@ import javax.validation.constraints.Size;
 public class Contact {
 	@Column(name = "email", updatable=true, nullable=false, insertable=true)
 	@Size(min = 1, max = 63)
-	@Pattern(regexp = "^[\\s\\S]+@[\\s\\S]+$", message="A vaild email address is required.") 
+	@Pattern(regexp = "^[\\s\\S]+@[\\s\\S]+$") 
 	private String email;
 	
 	@Column(name = "phone", updatable=true, nullable=true, insertable=true)

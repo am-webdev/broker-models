@@ -27,11 +27,11 @@ import javax.validation.constraints.Size;
 public class Person extends BaseEntity {
 	
 	@Column(name = "alias", updatable=true, nullable=false, insertable=true)
-	@Size(min = 1, max = 16, message = "An person's alias must contain between 1 and 16 characters")
+	@Size(min = 1, max = 16)
 	private String alias;
 	
 	@Column(name = "passwordHash", updatable=true, nullable=false, insertable=true)
-	@Size(min = 32, max = 32, message = "The passwordhash has to contain 32 bytes")
+	@Size(min = 32, max = 32)
 	private byte[] passwordHash;
 	
 	@Column(name = "groupAlias", updatable=true, nullable=false, insertable=true)
@@ -67,6 +67,7 @@ public class Person extends BaseEntity {
 		this.alias = "";
 		this.passwordHash = null;
 		this.group = Group.USER;
+		this.name = null;
 		this.address = null;
 		this.contact = null;
 		this.auctions = new HashSet<Auction>();
