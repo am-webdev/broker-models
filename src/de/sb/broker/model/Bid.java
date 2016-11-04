@@ -18,11 +18,11 @@ public class Bid extends BaseEntity {
 	@Min(1)
 	private long price; 		// in cents, min: 1  max: Long.max
 	
-	@ManyToOne(fetch = FetchType.LAZY)
+	@ManyToOne
 	@JoinColumn(name = "auctionIdentity")
 	private Auction auction;
 	
-	@ManyToOne(fetch = FetchType.LAZY)
+	@ManyToOne
 	@JoinColumn(name = "personIdentity")
 	private Person bidder;
 	
