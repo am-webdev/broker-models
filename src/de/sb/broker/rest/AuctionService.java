@@ -8,7 +8,6 @@ import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 
 import de.sb.broker.model.Auction;
-import de.sb.broker.model.Person;
 
 public class AuctionService {
 
