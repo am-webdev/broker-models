@@ -22,6 +22,11 @@ import javax.xml.bind.annotation.*;
 @DiscriminatorValue("BaseEntity")			
 @DiscriminatorColumn(name = "discriminator", discriminatorType = DiscriminatorType.STRING)  
 
+/**
+ * JAX-B annotation notes:
+ * real vs virtual properties? (to check)
+ *
+ */
 @XmlAccessorType(XmlAccessType.NONE) // NONE -> explicit annotation for all elements
 @XmlType // XML types -> WSDL, WADL
 @XmlSeeAlso({Auction.class, Person.class}) // Referencing subclasses
@@ -31,6 +36,7 @@ public abstract class BaseEntity implements Comparable<BaseEntity> {
 	/*   Attributes   */
 	/* ************** */
 	@Id
+	@XmlID
 	@Column(name = "identity", updatable=false, nullable=false, insertable=true)
     @GeneratedValue(strategy = GenerationType.IDENTITY)
 	private long identity;
