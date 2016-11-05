@@ -19,6 +19,7 @@ import javax.persistence.Table;
 import javax.validation.Valid;
 import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Size;
+import javax.xml.bind.annotation.XmlElement;
 
 @Entity
 @Table(name="Person", schema="_s0545840__brokerDB")
@@ -30,6 +31,7 @@ public class Person extends BaseEntity {
 		ADMIN, USER
 	}
 	
+	@XmlElement
 	@Column(name = "alias", updatable=true, nullable=false, insertable=true)
 	@Size(min = 1, max = 16)
 	private String alias;
@@ -38,20 +40,24 @@ public class Person extends BaseEntity {
 	@Size(min = 32, max = 32)
 	private byte[] passwordHash;
 	
+	@XmlElement
 	@Column(name = "groupAlias", updatable=true, nullable=false, insertable=true)
 	@Enumerated(EnumType.STRING)
 	private Group group;
 
+	@XmlElement
 	@Embedded
 	@Valid 
 	@NotNull
 	private Name name;
 
+	@XmlElement
 	@Embedded
 	@Valid 
 	@NotNull
 	private Address address;
 	
+	@XmlElement
 	@Embedded
 	@Valid 
 	@NotNull

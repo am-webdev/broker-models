@@ -22,11 +22,11 @@ import javax.xml.bind.annotation.*;
 @DiscriminatorValue("BaseEntity")			
 @DiscriminatorColumn(name = "discriminator", discriminatorType = DiscriminatorType.STRING)  
 
-@XmlAccessorType(XmlAccessType.NONE)
-@XmlType
-//@XmlSeeAlso()
+@XmlAccessorType(XmlAccessType.NONE) // NONE -> explicit annotation for all elements
+@XmlType // XML types -> WSDL, WADL
+@XmlSeeAlso({Auction.class, Person.class}) // Referencing subclasses
 
-public class BaseEntity implements Comparable<BaseEntity> {
+public abstract class BaseEntity implements Comparable<BaseEntity> {
 
 	/*   Attributes   */
 	/* ************** */
