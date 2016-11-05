@@ -12,44 +12,48 @@ public class PersonService {
 
 	final static EntityManagerFactory emf = LifeCycleProvider.brokerManager().getEntityManagerFactory();
 	
-	// GET /people
 	@GET
 	@Produces("application/xml")
 	@Path("xml/people")
-	public Person getPeopleXML(){
+	public <Set>Person getPeopleXML(){
+		
+		//select person from Person
 		
 		//TODO: write return 
 		return null;
 		
 	}
 	
-	// GET /people/{identity}
 	@GET
 	@Produces("application/xml")
 	@Path("xml/people/{identity}")
 	public Person getPeopleIdentityXML(@PathParam("identity") long identity){
 		
+		// select person from Person where person.identity = :personIdentity
+		
 		//TODO: write return 
 		return null;
 		
 	}
 	
-	// GET /people/{identity}/auctions
 	@GET
 	@Produces("application/xml")
 	@Path("xml/people/{identity}/auctions")
-	public Person[] getPeopleIdentityAuctionsXML(@PathParam("identity") long identity){
+	public <Set>Person getPeopleIdentityAuctionsXML(@PathParam("identity") long identity){
+		
+		// select auctions from Auctions where person.identity = :personIdentity 
 		
 		//TODO: write return 
 		return null;
 		
 	}
 	
-	// GET /people/{identity}/bids
 	@GET
 	@Produces("application/xml")
 	@Path("xml/people/{identity}/bids")
-	public Person[] getPeopleIdentityBidsXML(@PathParam("identity") long identity){
+	public <Set>Person getPeopleIdentityBidsXML(@PathParam("identity") long identity){
+		
+		// select bid from Bid where bid.bidderReference = :personIdentity
 		
 		//TODO: write return 
 		return null;
