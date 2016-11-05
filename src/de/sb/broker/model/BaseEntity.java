@@ -13,6 +13,7 @@ import javax.persistence.InheritanceType;
 import javax.persistence.PrimaryKeyJoinColumn;
 import javax.persistence.Table;
 import javax.persistence.Version;
+import javax.xml.bind.annotation.*;
 
 @Entity
 @Table(name="BaseEntity", schema="_s0545840__brokerDB")
@@ -20,6 +21,11 @@ import javax.persistence.Version;
 @PrimaryKeyJoinColumn(name = "identity")
 @DiscriminatorValue("BaseEntity")			
 @DiscriminatorColumn(name = "discriminator", discriminatorType = DiscriminatorType.STRING)  
+
+@XmlAccessorType(XmlAccessType.NONE)
+@XmlType
+//@XmlSeeAlso()
+
 public class BaseEntity implements Comparable<BaseEntity> {
 
 	/*   Attributes   */
