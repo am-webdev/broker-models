@@ -22,6 +22,7 @@ import javax.validation.constraints.Size;
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlElement;
+import javax.xml.bind.annotation.XmlRootElement;
 import javax.xml.bind.annotation.XmlType;
 
 @Entity
@@ -29,6 +30,7 @@ import javax.xml.bind.annotation.XmlType;
 @PrimaryKeyJoinColumn(name = "personIdentity")	
 @DiscriminatorValue("Person")
 @XmlType
+@XmlRootElement
 public class Person extends BaseEntity {
 	
 	public static enum Group {
