@@ -1,36 +1,39 @@
 package de.sb.broker.rest;
 
-import java.io.File;
+
+import java.util.ArrayList;
+import java.util.List;
 
 import javax.persistence.EntityManager;
 import javax.persistence.EntityManagerFactory;
 import javax.persistence.criteria.CriteriaBuilder;
-import javax.persistence.criteria.CriteriaQuery;
-import javax.persistence.criteria.Selection;
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
-import javax.xml.bind.JAXBContext;
-import javax.xml.bind.Marshaller;
-import javax.xml.bind.Unmarshaller;
+import javax.ws.rs.core.MediaType;
 
 import de.sb.broker.model.Person;
 
+@Path("people")
 public class PersonService {
 
-	final static EntityManager em = LifeCycleProvider.brokerManager();
-	final static EntityManagerFactory emf = em.getEntityManagerFactory();
-	final static CriteriaBuilder cb = em.getCriteriaBuilder();	
+//	static EntityManager em = LifeCycleProvider.brokerManager();
+//	static EntityManagerFactory emf = em.getEntityManagerFactory();
+//	static CriteriaBuilder cb = em.getCriteriaBuilder();	
 	
 //    JAXBContext jc = JAXBContext.;
 //    Unmarshaller u = jc.createUnmarshaller();
 //    Marshaller m = jc.createMarshaller();
 	
 	@GET
-	@Produces("application/xml")
-	@Path("xml/people")
-	public <Set>Person getPeopleXML(){
+	@Produces(MediaType.TEXT_HTML)
+	public String getPeopleXML(){
+		
+		List<Person> l = new ArrayList<Person>();
+		l.add(new Person());
+		l.add(new Person());
+		l.add(new Person());
 
 //		Selection<Criteria> s = new Selection();
 //		CriteriaQuery cq = cb.createQuery();
@@ -41,14 +44,14 @@ public class PersonService {
 		//emf.addNamedQuery("people", arg1);
 		
 		//TODO: write return 
-		return null;
+		return "Hello World!!!";
 		
 	}
 	
 	@GET
-	@Produces("application/xml")
-	@Path("xml/people/{identity}")
-	public Person getPeopleIdentityXML(@PathParam("identity") long identity){
+	@Path("{identity}")
+	@Produces(MediaType.APPLICATION_XML)
+	public Person getPeopleIdentityXML(@PathParam("identity") final long identity){
 		
 		// select person from Person where person.identity = :personIdentity
 		
@@ -58,9 +61,9 @@ public class PersonService {
 	}
 	
 	@GET
-	@Produces("application/xml")
-	@Path("xml/people/{identity}/auctions")
-	public <Set>Person getPeopleIdentityAuctionsXML(@PathParam("identity") long identity){
+	@Path("{identity}/auctions")
+	@Produces(MediaType.APPLICATION_XML)
+	public <Set>Person getPeopleIdentityAuctionsXML(@PathParam("identity") final long identity){
 		
 		// select auctions from Auctions where person.identity = :personIdentity 
 		
@@ -70,9 +73,9 @@ public class PersonService {
 	}
 	
 	@GET
-	@Produces("application/xml")
-	@Path("xml/people/{identity}/bids")
-	public <Set>Person getPeopleIdentityBidsXML(@PathParam("identity") long identity){
+	@Path("{identity}/bids")
+	@Produces(MediaType.APPLICATION_XML)
+	public <Set>Person getPeopleIdentityBidsXML(@PathParam("identity") final long identity){
 		
 		// select bid from Bid where bid.bidderReference = :personIdentity
 		
