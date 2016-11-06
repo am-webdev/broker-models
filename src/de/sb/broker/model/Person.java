@@ -19,12 +19,16 @@ import javax.persistence.Table;
 import javax.validation.Valid;
 import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Size;
+import javax.xml.bind.annotation.XmlAccessType;
+import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlElement;
+import javax.xml.bind.annotation.XmlType;
 
 @Entity
 @Table(name="Person", schema="_s0545840__brokerDB")
 @PrimaryKeyJoinColumn(name = "personIdentity")	
-@DiscriminatorValue("Person")					
+@DiscriminatorValue("Person")
+@XmlType
 public class Person extends BaseEntity {
 	
 	public static enum Group {
@@ -72,12 +76,12 @@ public class Person extends BaseEntity {
 	private Set<Bid> bids;
 	
 	public Person() {
-		this.alias = "";
+		this.alias = " ";
 		this.passwordHash = null;
 		this.group = Group.USER;
-		this.name = null;
-		this.address = null;
-		this.contact = null;
+		this.name = new Name();
+		this.address = new Address();
+		this.contact = new Contact();
 		this.auctions = new HashSet<Auction>();
 		this.bids = new HashSet<Bid>();
 	}

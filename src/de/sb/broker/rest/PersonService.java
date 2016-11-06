@@ -27,8 +27,8 @@ public class PersonService {
 //    Marshaller m = jc.createMarshaller();
 	
 	@GET
-	@Produces(MediaType.TEXT_HTML)
-	public String getPeopleXML(){
+	@Produces(MediaType.APPLICATION_XML)
+	public List<Person> getPeopleXML(){
 		
 		List<Person> l = new ArrayList<Person>();
 		l.add(new Person());
@@ -44,7 +44,7 @@ public class PersonService {
 		//emf.addNamedQuery("people", arg1);
 		
 		//TODO: write return 
-		return "Hello World!!!";
+		return l;
 		
 	}
 	
@@ -63,7 +63,7 @@ public class PersonService {
 	@GET
 	@Path("{identity}/auctions")
 	@Produces(MediaType.APPLICATION_XML)
-	public <Set>Person getPeopleIdentityAuctionsXML(@PathParam("identity") final long identity){
+	public List<Person> getPeopleIdentityAuctionsXML(@PathParam("identity") final long identity){
 		
 		// select auctions from Auctions where person.identity = :personIdentity 
 		
@@ -75,7 +75,7 @@ public class PersonService {
 	@GET
 	@Path("{identity}/bids")
 	@Produces(MediaType.APPLICATION_XML)
-	public <Set>Person getPeopleIdentityBidsXML(@PathParam("identity") final long identity){
+	public List<Person> getPeopleIdentityBidsXML(@PathParam("identity") final long identity){
 		
 		// select bid from Bid where bid.bidderReference = :personIdentity
 		

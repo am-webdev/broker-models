@@ -1,5 +1,7 @@
 package de.sb.broker.rest;
 
+import java.util.List;
+
 import javax.persistence.EntityManager;
 import javax.persistence.EntityManagerFactory;
 import javax.persistence.criteria.CriteriaBuilder;
@@ -21,11 +23,11 @@ public class AuctionService {
 	
 	@GET
 	@Produces(MediaType.APPLICATION_XML)
-	public <Set>Auction getAuctionsXML(){
+	public List<Auction> getAuctionsXML(){
 		
 		// select auction from Auction
 		
-		//TODO: write return 
+		//TODO: write return
 		return null;
 		
 	}
