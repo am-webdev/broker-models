@@ -1,7 +1,7 @@
 *.class
 
 src/META-INF/
-bin/META-INF/
+bin/
 
 # Mobile Tools for Java (J2ME)
 .mtj.tmp/
@@ -19,5 +19,3 @@ hs_err_pid*
 .project
 .settings/
 .idea/
-
-bin/
