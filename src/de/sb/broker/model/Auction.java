@@ -98,10 +98,12 @@ public class Auction extends BaseEntity {
 		return (System.currentTimeMillis() > this.closureTimestamp);
 	}
 	
-	@XmlElement
-	public boolean isSealed() {
-		return (this.bids.size() > 0 || isClosed());
-	}
+// TODO: BUG FIX -> Unknown column 't1.auctionIdentity' in 'field list'
+// Reference Error!!!
+//	@XmlElement
+//	public boolean isSealed() {
+//		return (this.bids.size() > 0 || isClosed());
+//	}
 	
 	// Getter Setter
 
