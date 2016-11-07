@@ -1,9 +1,11 @@
 package de.sb.broker.rest;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import javax.persistence.EntityManager;
 import javax.persistence.EntityManagerFactory;
+import javax.persistence.NoResultException;
 import javax.persistence.TypedQuery;
 import javax.persistence.criteria.CriteriaBuilder;
 import javax.ws.rs.GET;
@@ -35,10 +37,6 @@ public class AuctionService {
 	@Produces(MediaType.APPLICATION_XML)
 	public void updateAuctionsXML(){
 		
-		// update auction set @PUT variable ...
-		
-		//TODO: put into DB
-		
 	}
 	
 	@GET
@@ -47,7 +45,7 @@ public class AuctionService {
 	public Auction getAuctionIdentityXML(@PathParam("identity") final long id){
 		final EntityManager em = LifeCycleProvider.brokerManager();
 		TypedQuery<Auction> query = em
-				.createQuery("SELECT a FROM Auction a WHERE p.identity = :id", Auction.class)
+				.createQuery("SELECT a FROM Auction a WHERE p.seller.identity = :id", Auction.class)
 				.setParameter("id", id);
 		return query.getSingleResult();
 	}

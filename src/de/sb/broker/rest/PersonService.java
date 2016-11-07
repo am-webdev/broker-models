@@ -41,7 +41,7 @@ public class PersonService {
 	@Produces({MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML})
 	public List<Auction> getPeopleIdentityAuctions(@PathParam("identity") final long id){
 		final EntityManager em = LifeCycleProvider.brokerManager();
-		TypedQuery<Auction> query = em.createQuery("SELECT a FROM Auction a WHERE a.seller = :id", Auction.class) // TODO: doesnt work!!
+		TypedQuery<Auction> query = em.createQuery("SELECT a FROM Auction a WHERE a.seller.identity = :id", Auction.class)
 				.setParameter("id", id);
 		return query.getResultList();
 	}
@@ -51,7 +51,7 @@ public class PersonService {
 	@Produces({MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML})
 	public List<Bid> getPeopleIdentityBids(@PathParam("identity") final long id){
 		final EntityManager em = LifeCycleProvider.brokerManager();
-		TypedQuery<Bid> query = em.createQuery("TODO", Bid.class) // TODO: doesnt work!!
+		TypedQuery<Bid> query = em.createQuery("SELECT b from Bid b WHERE b.bidder.identity = :id", Bid.class)
 				.setParameter("id", id);
 		return query.getResultList();
 	}
