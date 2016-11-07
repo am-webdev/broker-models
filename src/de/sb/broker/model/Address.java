@@ -19,6 +19,16 @@ public class Address {
 	@Size(min = 1, max = 63)
 	private String city;
 	
+	public Address(){
+		
+	}
+	
+	public Address(String street, String postCode, String city){
+		this.street = street;
+		this.postCode = postCode;
+		this.city = city;
+	}
+	
 	public String getStreet() {
 		return this.street;
 	}

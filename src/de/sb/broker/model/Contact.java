@@ -15,6 +15,15 @@ public class Contact {
 	@Size(min = 0, max = 31)
 	private String phone;
 	
+	public Contact(){
+		
+	}
+	
+	public Contact(String email, String phone) {
+		this.email = email;
+		this.phone = phone;
+	}
+	
 	public String getEmail() {
 		return this.email;
 	}

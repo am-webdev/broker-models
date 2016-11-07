@@ -14,6 +14,15 @@ public class Name {
 	@Size(min = 1, max = 31)
 	private String given;
 	
+	public Name(){
+		
+	}
+	
+	public Name(String familyName, String givenName){
+		this.family = familyName;
+		this.given = givenName;
+	}
+	
 	public String getFamily() {
 		return this.family;
 	}

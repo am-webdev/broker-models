@@ -19,11 +19,11 @@ import de.sb.broker.model.Auction;
 public class AuctionService {
 
 	private static final EntityManagerFactory emf = Persistence.createEntityManagerFactory("broker");
-	private static final EntityManager em = emf.createEntityManager();
 	
 	@GET
 	@Produces({MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML})
 	public List<Auction> getAuctionsXML(){
+		final EntityManager em = emf.createEntityManager();
 		TypedQuery<Auction> query = em.createQuery("SELECT a FROM Auction a", Auction.class);
 		return query.getResultList();
 	}
@@ -31,6 +31,7 @@ public class AuctionService {
 	@PUT
 	@Produces(MediaType.APPLICATION_XML)
 	public void updateAuctionsXML(){
+		final EntityManager em = emf.createEntityManager();
 		try{
 			em.getTransaction().begin();
 			// final Auction = new Auction(Seller); TODO: add seller
@@ -46,6 +47,7 @@ public class AuctionService {
 	@Path("{identity}")
 	@Produces(MediaType.APPLICATION_XML)
 	public Auction getAuctionIdentityXML(@PathParam("identity") final long id){
+		final EntityManager em = emf.createEntityManager();
 		TypedQuery<Auction> query = em
 				.createQuery("SELECT a FROM Auction a WHERE p.seller.identity = :id", Auction.class)
 				.setParameter("id", id);
