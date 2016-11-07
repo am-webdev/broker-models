@@ -13,7 +13,9 @@ import javax.persistence.Entity;
 import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
 import javax.persistence.FetchType;
+import javax.persistence.JoinColumn;
 import javax.persistence.OneToMany;
+import javax.persistence.OneToOne;
 import javax.persistence.PrimaryKeyJoinColumn;
 import javax.persistence.Table;
 import javax.validation.Valid;
@@ -57,6 +59,8 @@ public class Person extends BaseEntity {
 	@NotNull
 	private Contact contact;
 	
+	@OneToOne
+	@JoinColumn(name = "avaterReference")
 	private Document avatar;
 	
 	@OneToMany(fetch = FetchType.LAZY, mappedBy = "seller")
