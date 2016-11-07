@@ -57,6 +57,8 @@ public class Person extends BaseEntity {
 	@NotNull
 	private Contact contact;
 	
+	private Document avatar;
+	
 	@OneToMany(fetch = FetchType.LAZY, mappedBy = "seller")
 	@NotNull
 	private Set<Auction> auctions;
@@ -74,6 +76,7 @@ public class Person extends BaseEntity {
 		this.contact = null;
 		this.auctions = new HashSet<Auction>();
 		this.bids = new HashSet<Bid>();
+		this.avatar = null;
 	}
 	
 	public static byte[] passwordHash(String password) {
@@ -144,7 +147,12 @@ public class Person extends BaseEntity {
 	public Set<Bid> getBids() {
 		return bids;
 	}
-	
-	
-	
+
+	public Document getAvatar() {
+		return avatar;
+	}
+
+	public void setAvatar(Document avatar) {
+		this.avatar = avatar;
+	}	
 }
