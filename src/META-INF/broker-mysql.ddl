@@ -26,10 +26,12 @@ CREATE TABLE Person (
 	city VARCHAR(63) NOT NULL,
 	email VARCHAR(63) NOT NULL,
 	phone VARCHAR(63) NULL,
+	avatarReference BIGINT NOT NULL,
 	PRIMARY KEY (PersonIdentity),
 	UNIQUE KEY (alias),
 	UNIQUE KEY (email),
 	FOREIGN KEY (personIdentity) REFERENCES BaseEntity (identity) ON DELETE CASCADE ON UPDATE CASCADE
+	FOREIGN KEY (avatarReference) REFERENCES Document (documentIdentity) ON DELETE CASCADE ON UPDATE CASCADE,
 ) ENGINE=InnoDB;
 
 CREATE TABLE Auction (
@@ -56,6 +58,16 @@ CREATE TABLE Bid (
 	FOREIGN KEY (bidIdentity) REFERENCES BaseEntity (identity) ON DELETE CASCADE ON UPDATE CASCADE,
 	FOREIGN KEY (bidderReference) REFERENCES Person (personIdentity) ON DELETE CASCADE ON UPDATE CASCADE,
 	FOREIGN KEY (auctionReference) REFERENCES Auction (auctionIdentity) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB;
+
+CREATE TABLE Document (
+	documentIdentity BIGINT NOT NULL,
+	name VARCHAR(50) NOT NULL,
+	type VARCHAR(50) NOT NULL,
+	content LONGBLOB NOT NULL,
+	hash BINARY(32) NOT NULL,
+	PRIMARY KEY (documentIdentity),
+	UNIQUE KEY (documentIdentity)
 ) ENGINE=InnoDB;
 
 -- define views
