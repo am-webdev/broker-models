@@ -1,9 +1,11 @@
 package de.sb.broker.rest;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import javax.persistence.EntityManager;
 import javax.persistence.EntityManagerFactory;
+import javax.persistence.NoResultException;
 import javax.persistence.Persistence;
 import javax.persistence.TypedQuery;
 import javax.ws.rs.GET;
@@ -14,6 +16,7 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 
 import de.sb.broker.model.Auction;
+import de.sb.broker.model.Bid;
 
 @Path("auctions")
 public class AuctionService {
@@ -24,8 +27,18 @@ public class AuctionService {
 	@Produces({MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML})
 	public List<Auction> getAuctionsXML(){
 		final EntityManager em = emf.createEntityManager();
-		TypedQuery<Auction> query = em.createQuery("SELECT a FROM Auction a", Auction.class);
-		return query.getResultList();
+		List<Auction> l;
+		try{			
+
+			TypedQuery<Auction> query = em.createQuery("SELECT a FROM Auction a", Auction.class);
+			l =  query.getResultList();
+		}catch(NoResultException e){
+			l = new ArrayList<Auction>();
+		}finally{
+			if(em.getTransaction().isActive()) em.getTransaction().rollback();
+			em.close();
+		}
+		return l;
 	}
 	
 	@PUT
@@ -46,11 +59,20 @@ public class AuctionService {
 	@GET
 	@Path("{identity}")
 	@Produces(MediaType.APPLICATION_XML)
-	public Auction getAuctionIdentityXML(@PathParam("identity") final long id){
+	public List<Auction> getAuctionIdentityXML(@PathParam("identity") final long id){
 		final EntityManager em = emf.createEntityManager();
-		TypedQuery<Auction> query = em
-				.createQuery("SELECT a FROM Auction a WHERE p.seller.identity = :id", Auction.class)
-				.setParameter("id", id);
-		return query.getSingleResult();
+		List<Auction> l;
+		try{			
+			TypedQuery<Auction> query = em
+					.createQuery("SELECT a FROM Auction a WHERE a.seller.identity = :id", Auction.class)
+					.setParameter("id", id);
+			l =  query.getResultList();
+		}catch(NoResultException e){
+			l = new ArrayList<Auction>();
+		}finally{
+			if(em.getTransaction().isActive()) em.getTransaction().rollback();
+			em.close();
+		}
+		return l;
 	}
 }

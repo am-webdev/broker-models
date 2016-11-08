@@ -54,10 +54,12 @@ public class Auction extends BaseEntity {
 	@Column(name = "description", updatable=true, nullable=false, insertable=true)
 	@Size(min = 1, max = 8189)
 	private String description;
-	
+
+	@XmlElement
 	@ManyToOne
 	@JoinColumn(name = "sellerReference")
 	private Person seller;
+
 	
 	@OneToMany(mappedBy = "auction", cascade = CascadeType.REMOVE)
 	private Set<Bid> bids;
