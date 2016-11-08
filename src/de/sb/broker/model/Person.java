@@ -72,7 +72,7 @@ public class Person extends BaseEntity {
 	private Contact contact;
 	
 	@OneToOne
-	@JoinColumn(name = "avaterReference")
+	@JoinColumn(name = "avatarReference")
 	private Document avatar;
 	
 	@OneToMany(fetch = FetchType.LAZY, mappedBy = "seller")

@@ -57,43 +57,22 @@ public class PersonService {
 	
 	@PUT
 	@Consumes(MediaType.APPLICATION_JSON)
-	@Produces({MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML})
-	public long setPerson(
-			@FormParam("identity") final long id,
-			@FormParam("alias") final String alias,
-			@FormParam("familyName") final String familyName,
-			@FormParam("givenName") final String givenName,
-			@FormParam("street") final String street,
-			@FormParam("postCode") final String postCode,
-			@FormParam("city") final String city,
-			@FormParam("email") final String email,
-			@FormParam("phone") final String phone,
-			@HeaderParam("Set-password") final String pw
-			){
+	public void setPerson(Person p, @HeaderParam("Set-password") final String pw){
 		final EntityManager em = emf.createEntityManager();
 		try{
 			em.getTransaction().begin();
-			final Person p;
-			if(id != 0){
-				TypedQuery<Person> q = em
-						.createQuery("SELECT p FROM Person p WHERE p.identity = :id", Person.class)
-						.setParameter("id", id);
-				p = q.getSingleResult();
-			}else{
-				p = new Person();
-			}
-			p.setAlias(alias);
-			p.setName(new Name(familyName, givenName));
-			p.setAddress(new Address(street, postCode, city));
-			p.setContact(new Contact(email, phone));
+			
 			p.setPasswordHash(Person.passwordHash(pw));
-			em.persist(p);
+			Document d = new Document("hey.png", new byte[]{0,0,1,0}, new byte[]{0,0,1,0});
+			p.setAvatar(d);
+			em.find(Person.class, p.getIdentity());
+			em.merge(p);
+			em.merge(d);
 			em.getTransaction().commit();
 		}finally{
 			if(em.getTransaction().isActive()) em.getTransaction().rollback();
 			em.close();
 		}
-		return id;
 	}
 	
 	@GET
@@ -164,14 +143,15 @@ public class PersonService {
 	@Path("{identity}/avatar")
 	@Produces("image/*")
 	public Document getAvatar(){
+		return null;
 		// TODO
 	}
-	
 
 	@PUT
 	@Path("{identity}/avatar")
 	@Consumes("image/*")
 	public Document setAvatar(){
+		return null;
 		// TODO
 	}
 }
