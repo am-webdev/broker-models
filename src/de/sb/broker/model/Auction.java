@@ -16,6 +16,9 @@ import javax.persistence.Table;
 import javax.validation.constraints.Max;
 import javax.validation.constraints.Min;
 import javax.validation.constraints.Size;
+import javax.xml.bind.annotation.XmlElement;
+import javax.xml.bind.annotation.XmlRootElement;
+import javax.xml.bind.annotation.XmlType;
 
 import de.sb.java.validation.Inequal;
 
@@ -24,29 +27,39 @@ import de.sb.java.validation.Inequal;
 @PrimaryKeyJoinColumn(name = "auctionIdentity")
 @DiscriminatorValue("Auction")			
 @Inequal(leftAccessPath = "closureTimestamp", rightAccessPath = "creationTimestamp", operator = Inequal.Operator.GREATER)
+@XmlType
+@XmlRootElement
 public class Auction extends BaseEntity {
+	
+	@XmlElement
 	@Column(name = "title", updatable=true, nullable=false, insertable=true)
 	@Size(min = 1, max = 255)
 	private String title;
 	
+	@XmlElement
 	@Column(name = "unitCount", updatable=true, nullable=false, insertable=true)
 	@Min(1)
 	private short unitCount;
 	
+	@XmlElement
 	@Column(name = "askingPrice", updatable=true, nullable=false, insertable=true)
 	@Min(value = 1)
 	private long askingPrice;
 	
+	@XmlElement
 	@Column(name = "closureTimestamp", updatable=true, nullable=false, insertable=true)
 	private long closureTimestamp; 		// in millisec since 1970-01-01 00-00-00-000
 	
+	@XmlElement
 	@Column(name = "description", updatable=true, nullable=false, insertable=true)
 	@Size(min = 1, max = 8189)
 	private String description;
-	
+
+	@XmlElement
 	@ManyToOne
 	@JoinColumn(name = "sellerReference")
 	private Person seller;
+
 	
 	@OneToMany(mappedBy = "auction", cascade = CascadeType.REMOVE)
 	private Set<Bid> bids;
@@ -82,13 +95,17 @@ public class Auction extends BaseEntity {
 		return rtn;
 	}
 	
+	@XmlElement
 	public boolean isClosed() {
 		return (System.currentTimeMillis() > this.closureTimestamp);
 	}
 	
-	public boolean isSealed() {
-		return (this.bids.size() > 0 || isClosed());
-	}
+// TODO: BUG FIX -> Unknown column 't1.auctionIdentity' in 'field list'
+// Reference Error!!!
+//	@XmlElement
+//	public boolean isSealed() {
+//		return (this.bids.size() > 0 || isClosed());
+//	}
 	
 	// Getter Setter
 
