@@ -9,6 +9,11 @@ import javax.persistence.EntityManagerFactory;
 import javax.persistence.NoResultException;
 import javax.persistence.Persistence;
 import javax.persistence.TypedQuery;
+import javax.persistence.criteria.CriteriaBuilder;
+import javax.persistence.criteria.CriteriaQuery;
+import javax.persistence.criteria.Root;
+import javax.persistence.metamodel.EntityType;
+import javax.persistence.metamodel.Metamodel;
 import javax.validation.constraints.Size;
 import javax.ws.rs.GET;
 import javax.ws.rs.HeaderParam;
@@ -119,7 +124,7 @@ public class PersonService {
 		List<Auction> l;
 		//TODO: fetch join 
 		try{
-			TypedQuery<Auction> query = em.createQuery("SELECT a FROM Auction a WHERE a.seller.identity = :id", Auction.class) //TODO: include bidders :D
+			TypedQuery<Auction> query = em.createQuery("SELECT a FROM Auction a LEFT JOIN a.bids b WHERE a.seller.identity = :id OR b.bidder.identity = :id", Auction.class) //TODO: include bidders :D
 					.setParameter("id", id);
 			l = query.getResultList();
 		}catch(NoResultException e){
@@ -137,11 +142,13 @@ public class PersonService {
 	public List<Bid> getPeopleIdentityBids(@PathParam("identity") final long id){
 		final EntityManager em = emf.createEntityManager();
 		//TODO -> join with auctions, check closureTimeStamp
-		List<Bid> l;
+		List<Bid> l = new ArrayList<Bid>();
 		try{
-			TypedQuery<Bid> query = em.createQuery("SELECT b FROM Bid b WHERE b.bidder.identity = :id", Bid.class)
-					.setParameter("id", id);
-			l = query.getResultList();
+			long ts = System.currentTimeMillis();
+			TypedQuery<Bid> query = em.createQuery("SELECT b FROM Bid b JOIN b.auction a WHERE a.closureTimestamp < :ts AND b.bidder.identity = :id", Bid.class)
+					.setParameter("id", id)
+					.setParameter("ts", ts);
+			l =  query.getResultList();
 		}catch(NoResultException e){
 			l = new ArrayList<Bid>();
 		}finally{
