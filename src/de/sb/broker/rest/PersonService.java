@@ -26,6 +26,7 @@ import de.sb.broker.model.Bid;
 import de.sb.broker.model.Contact;
 import de.sb.broker.model.Name;
 import de.sb.broker.model.Person;
+import de.sb.broker.model.Document;
 
 @Path("people")
 public class PersonService {
@@ -148,5 +149,22 @@ public class PersonService {
 			em.close();
 		}
 		return l;
+	}
+	
+	
+	/* Services for avatar */
+	@GET
+	@Path("{identity}/avatar")
+	@Produces("image/*")
+	public Document getAvatar(){
+		// TODO
+	}
+	
+
+	@PUT
+	@Path("{identity}/avatar")
+	@Consumes("image/*")
+	public Document setAvatar(){
+		// TODO
 	}
 }
