@@ -52,7 +52,7 @@ public class PersonService {
 	@PUT
 	@Consumes(MediaType.APPLICATION_JSON)
 	@Produces({MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML})
-	public void setPerson(
+	public long setPerson(
 			@FormParam("identity") final long id,
 			@FormParam("alias") final String alias,
 			@FormParam("familyName") final String familyName,
@@ -80,13 +80,14 @@ public class PersonService {
 			p.setName(new Name(familyName, givenName));
 			p.setAddress(new Address(street, postCode, city));
 			p.setContact(new Contact(email, phone));
-			p.setPassword(pw);
+			p.setPasswordHash(Person.passwordHash(pw));
 			em.persist(p);
 			em.getTransaction().commit();
 		}finally{
 			if(em.getTransaction().isActive()) em.getTransaction().rollback();
 			em.close();
 		}
+		return id;
 	}
 	
 	@GET
@@ -115,6 +116,7 @@ public class PersonService {
 	public List<Auction> getPeopleIdentityAuctions(@PathParam("identity") final long id){
 		final EntityManager em = emf.createEntityManager();
 		List<Auction> l;
+		//TODO: fetch join 
 		try{
 			TypedQuery<Auction> query = em.createQuery("SELECT a FROM Auction a WHERE a.seller.identity = :id", Auction.class) //TODO: include bidders :D
 					.setParameter("id", id);
@@ -133,10 +135,10 @@ public class PersonService {
 	@Produces({MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML})
 	public List<Bid> getPeopleIdentityBids(@PathParam("identity") final long id){
 		final EntityManager em = emf.createEntityManager();
-		//TODO: fetch join
+		//TODO -> join with auctions, check closureTimeStamp
 		List<Bid> l;
 		try{
-			TypedQuery<Bid> query = em.createQuery("SELECT b FROM Bid b JOIN b.auction a WHERE b.bidder.identity = :id", Bid.class)
+			TypedQuery<Bid> query = em.createQuery("SELECT b FROM Bid b WHERE b.bidder.identity = :id", Bid.class)
 					.setParameter("id", id);
 			l = query.getResultList();
 		}catch(NoResultException e){

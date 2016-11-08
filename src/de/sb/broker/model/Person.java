@@ -112,10 +112,6 @@ public class Person extends BaseEntity {
 	public byte[] getPasswordHash() {
 		return passwordHash;
 	}
-	
-	public void setPassword(String pw){
-		this.setPasswordHash(passwordHash(pw));
-	}
 
 	public void setPasswordHash(byte[] passwordHash) {
 		this.passwordHash = passwordHash;
