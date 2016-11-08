@@ -26,6 +26,10 @@ import javax.validation.constraints.Size;
 @DiscriminatorValue("Person")					
 public class Person extends BaseEntity {
 	
+	public static enum Group {
+		ADMIN, USER
+	}
+	
 	@Column(name = "alias", updatable=true, nullable=false, insertable=true)
 	@Size(min = 1, max = 16)
 	private String alias;
@@ -54,14 +58,12 @@ public class Person extends BaseEntity {
 	private Contact contact;
 	
 	@OneToMany(fetch = FetchType.LAZY, mappedBy = "seller")
+	@NotNull
 	private Set<Auction> auctions;
 	
 	@OneToMany(fetch = FetchType.LAZY, mappedBy = "bidder")
+	@NotNull
 	private Set<Bid> bids;
-	
-	public static enum Group {
-		ADMIN, USER
-	}
 	
 	public Person() {
 		this.alias = "";

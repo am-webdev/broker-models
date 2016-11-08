@@ -3,6 +3,7 @@ package de.sb.broker.model;
 import java.util.HashSet;
 import java.util.Set;
 
+import javax.persistence.CascadeType;
 import javax.persistence.Column;
 import javax.persistence.DiscriminatorValue;
 import javax.persistence.Entity;
@@ -30,7 +31,6 @@ public class Auction extends BaseEntity {
 	
 	@Column(name = "unitCount", updatable=true, nullable=false, insertable=true)
 	@Min(1)
-	@Max(99999)
 	private short unitCount;
 	
 	@Column(name = "askingPrice", updatable=true, nullable=false, insertable=true)
@@ -44,11 +44,11 @@ public class Auction extends BaseEntity {
 	@Size(min = 1, max = 8189)
 	private String description;
 	
-	@ManyToOne(fetch = FetchType.LAZY)
+	@ManyToOne
 	@JoinColumn(name = "sellerReference")
 	private Person seller;
 	
-	@OneToMany(fetch = FetchType.LAZY, mappedBy = "auction")
+	@OneToMany(mappedBy = "auction", cascade = CascadeType.REMOVE)
 	private Set<Bid> bids;
 	
 	protected Auction() {
