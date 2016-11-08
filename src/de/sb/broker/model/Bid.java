@@ -3,6 +3,9 @@ package de.sb.broker.model;
 import javax.persistence.*;
 import javax.validation.constraints.Min;
 import javax.validation.constraints.Size;
+import javax.xml.bind.annotation.XmlElement;
+import javax.xml.bind.annotation.XmlRootElement;
+import javax.xml.bind.annotation.XmlType;
 
 import de.sb.java.validation.Inequal;
 
@@ -12,17 +15,22 @@ import de.sb.java.validation.Inequal;
 @DiscriminatorValue("Bid")			
 @Inequal(leftAccessPath = "price", rightAccessPath = { "auction", "askingPrice" } , operator = Inequal.Operator.GREATER_EQUAL )
 @Inequal(leftAccessPath = { "bidder" , "identity" }, rightAccessPath = { "auction", "seller" , "identity" } , operator = Inequal.Operator.NOT_EQUAL)
+@XmlType
+@XmlRootElement
 public class Bid extends BaseEntity {
 	
+	@XmlElement
 	@Column(name = "price", updatable=true, nullable=false, insertable=true)
 	@Min(1)
 	private long price; 		// in cents, min: 1  max: Long.max
 	
+	@XmlElement
 	@ManyToOne
 	//@JoinColumn(name = "auctionIdentity")
 	@JoinColumn(name = "auctionReference")
 	private Auction auction;
 	
+	@XmlElement
 	@ManyToOne
 	//@JoinColumn(name = "personIdentity")
 	@JoinColumn(name = "bidderReference")
