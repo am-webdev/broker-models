@@ -13,7 +13,9 @@ import javax.persistence.Entity;
 import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
 import javax.persistence.FetchType;
+import javax.persistence.JoinColumn;
 import javax.persistence.OneToMany;
+import javax.persistence.OneToOne;
 import javax.persistence.PrimaryKeyJoinColumn;
 import javax.persistence.Table;
 import javax.validation.Valid;
@@ -69,6 +71,10 @@ public class Person extends BaseEntity {
 	@NotNull
 	private Contact contact;
 	
+	@OneToOne
+	@JoinColumn(name = "avaterReference")
+	private Document avatar;
+	
 	@OneToMany(fetch = FetchType.LAZY, mappedBy = "seller")
 	@NotNull
 	private Set<Auction> auctions;
@@ -86,6 +92,7 @@ public class Person extends BaseEntity {
 		this.contact = new Contact();
 		this.auctions = new HashSet<Auction>();
 		this.bids = new HashSet<Bid>();
+		this.avatar = null;
 	}
 	
 	public static byte[] passwordHash(String password) {
@@ -156,7 +163,12 @@ public class Person extends BaseEntity {
 	public Set<Bid> getBids() {
 		return bids;
 	}
-	
-	
-	
+
+	public Document getAvatar() {
+		return avatar;
+	}
+
+	public void setAvatar(Document avatar) {
+		this.avatar = avatar;
+	}	
 }
