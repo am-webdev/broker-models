@@ -40,16 +40,20 @@ public class Document extends BaseEntity {
 
 	/* GETTER */
 	
+	public String getName() {
+		return this.name;
+	}
+	
 	public String getType() {
-		return type;
+		return this.type;
 	}
 
 	public byte[] getContent() {
-		return content;
+		return this.content;
 	}
 
 	public byte[] getHash() {
-		return hash;
+		return this.hash;
 	}
 	
 }
