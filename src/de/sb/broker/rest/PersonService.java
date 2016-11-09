@@ -1,5 +1,10 @@
 package de.sb.broker.rest;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -22,6 +27,8 @@ import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
+import javax.ws.rs.core.Response.ResponseBuilder;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.FormParam;
 
@@ -142,10 +149,36 @@ public class PersonService {
 	@GET
 	@Path("{identity}/avatar")
 	@Produces("image/*")
-	public Document getAvatar(){
-		return null;
-		// TODO
-	}
+	public Response getAvatar(@PathParam("identity")  String id) throws IOException {
+		// Select from Database
+		final EntityManager em = emf.createEntityManager();
+		Document d = null;
+		try{
+			TypedQuery<Document> query = em
+					.createQuery("SELECT d FROM Document d RIGHT JOIN Person p WHERE p.identity = :id", Document.class)
+					.setParameter("id", id);
+			d = query.getSingleResult();
+		}catch(NoResultException e){
+			// TODO			
+		}finally{
+			if(em.getTransaction().isActive()) em.getTransaction().rollback();
+			em.close();
+		}
+	 
+		final ByteArrayInputStream in = new ByteArrayInputStream(d.getContent());
+	   
+		ByteArrayOutputStream out = new ByteArrayOutputStream();
+		int data = in.read();
+		while (data >= 0) {
+			out.write((char) data);
+			data = in.read();
+		}
+		out.flush();
+	     
+		ResponseBuilder builder = Response.ok(out.toByteArray());
+		builder.header("Content-Disposition", "attachment; filename=" + d.getName());
+		return builder.build();
+    }
 
 	@PUT
 	@Path("{identity}/avatar")
