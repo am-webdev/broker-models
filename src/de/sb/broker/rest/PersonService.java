@@ -182,9 +182,47 @@ public class PersonService {
 
 	@PUT
 	@Path("{identity}/avatar")
-	@Consumes("image/*")
-	public Document setAvatar(){
-		return null;
+	@Consumes(MediaType.MULTIPART_FORM_DATA)
+	public Response setAvatar(
+			@PathParam("identity")  String id,
+			@FormParam("file") ByteArrayInputStream byteArrayInputStream,
+			@FormParam("type") String type,
+			@FormParam("title") String title,
+			@FormParam("hash") byte[] hash) {
+		
+		final EntityManager em = emf.createEntityManager();
+		
+		String status = "Upload has been successful";
+		Person p;
+		
+		// data = new ByteArrayInputStream(byteArrayInputStream).read();
+		
+		Document d = new Document(type, null, hash);
+		
+		try{
+			TypedQuery<Person> query = em
+					.createQuery("SELECT p FROM Person p WHERE p.identity = :id", Person.class)
+					.setParameter("id", id);
+			p = query.getSingleResult();
+		}catch(NoResultException e){
+			p = new Person();
+		}finally{
+			if(em.getTransaction().isActive()) em.getTransaction().rollback();
+			em.close();
+		}
+		
+	
+		try {
+			// TODO Insert into DB
+		} catch (Exception e) {
+			status = "Upload has failed";
+			e.printStackTrace();
+		} finally {
+			if(em.getTransaction().isActive()) em.getTransaction().rollback();
+			em.close();
+		}
+
+		return Response.status(200).entity(status).build();
 		// TODO
 	}
 }
