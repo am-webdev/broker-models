@@ -1,5 +1,6 @@
 *.class
 
+src/META-INF/persistence.xml
 src/META-INF/
 bin/
 
