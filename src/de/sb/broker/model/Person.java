@@ -6,6 +6,7 @@ import java.security.NoSuchAlgorithmException;
 import java.util.HashSet;
 import java.util.Set;
 
+import javax.persistence.CascadeType;
 import javax.persistence.Column;
 import javax.persistence.DiscriminatorValue;
 import javax.persistence.Embedded;
@@ -14,6 +15,7 @@ import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
 import javax.persistence.FetchType;
 import javax.persistence.JoinColumn;
+import javax.persistence.ManyToOne;
 import javax.persistence.OneToMany;
 import javax.persistence.OneToOne;
 import javax.persistence.PrimaryKeyJoinColumn;
@@ -71,7 +73,7 @@ public class Person extends BaseEntity {
 	@NotNull
 	private Contact contact;
 	
-	@OneToOne
+	@ManyToOne(cascade = CascadeType.PERSIST)
 	@JoinColumn(name = "avatarReference")
 	private Document avatar;
 	

@@ -15,7 +15,7 @@ public class Document extends BaseEntity {
 
 	@Column(name = "name", updatable=false, nullable=false, insertable=true)
 	@Size(min = 1, max = 50)
-	private String name;
+	private String name;		// TODO TBD
 	
 	@Column(name = "type", updatable=false, nullable=false, insertable=true)
 	@Size(min = 1, max = 50)
@@ -29,10 +29,11 @@ public class Document extends BaseEntity {
 	private byte[] hash;
 	
 	protected Document() {
-		this(null, null, null);
+		this(null, null, null, null);
 	}
 
-	public Document(String type, byte[] content, byte[] hash) {
+	public Document(String name, String type, byte[] content, byte[] hash) {
+		this.name = name;
 		this.type = type;
 		this.content = content;
 		this.hash = hash;	

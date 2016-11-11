@@ -70,7 +70,7 @@ public class PersonService {
 			em.getTransaction().begin();
 			
 			p.setPasswordHash(Person.passwordHash(pw));
-			Document d = new Document("hey.png", new byte[]{0,0,1,0}, new byte[]{0,0,1,0});
+			Document d = new Document("hey.png", "application/image-png", new byte[]{0,0,1,0}, new byte[]{0,0,1,0});
 			p.setAvatar(d);
 			em.find(Person.class, p.getIdentity());
 			em.merge(p);
@@ -197,7 +197,7 @@ public class PersonService {
 		
 		// data = new ByteArrayInputStream(byteArrayInputStream).read();
 		
-		Document d = new Document(type, null, hash);
+		Document d = new Document(title, type, null, hash);
 		
 		try{
 			TypedQuery<Person> query = em
