@@ -7,7 +7,7 @@ USE broker;
 -- define tables, indices, etc.
 CREATE TABLE BaseEntity (
 	identity BIGINT NOT NULL AUTO_INCREMENT,
-	discriminator ENUM("Person", "Auction", "Bid") NOT NULL,
+	discriminator ENUM("Person", "Auction", "Bid", "Document") NOT NULL,
 	version INTEGER UNSIGNED NOT NULL DEFAULT 1,
 	creationTimestamp BIGINT NOT NULL,
 	KEY (discriminator),
