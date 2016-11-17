@@ -48,6 +48,10 @@ public class PersonService {
 	
 	private static final EntityManagerFactory emf = Persistence.createEntityManagerFactory("broker");
 	
+	/**
+	 * Returns the people matching the given criteria, with null or missing parameters identifying omitted criteria.
+	 * @return
+	 */
 	@GET
 	@Produces({MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML})
 	public List<Person> getPeople(){
@@ -65,26 +69,11 @@ public class PersonService {
 		return l;
 	}
 	
-	@PUT
-	@Consumes(MediaType.APPLICATION_JSON)
-	public void setPerson(Person p, @HeaderParam("Set-password") final String pw){
-		final EntityManager em = emf.createEntityManager();
-		try{
-			em.getTransaction().begin();
-			
-			p.setPasswordHash(Person.passwordHash(pw));
-			Document d = new Document("hey.png", "application/image-png", new byte[]{0,0,1,0}, new byte[]{0,0,1,0});
-			p.setAvatar(d);
-			em.find(Person.class, p.getIdentity());
-			em.merge(p);
-			em.merge(d);
-			em.getTransaction().commit();
-		}finally{
-			if(em.getTransaction().isActive()) em.getTransaction().rollback();
-			em.close();
-		}
-	}
-	
+	/**
+	 * Returns the person matching the given identity.
+	 * @param id
+	 * @return
+	 */
 	@GET
 	@Path("{identity}")
 	@Produces({MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML})
@@ -105,15 +94,19 @@ public class PersonService {
 		return p;
 	}
 	
+	/**
+	 * Returns all auctions associated with the person matching the given identity (as seller or bidder).
+	 * @param id
+	 * @return
+	 */
 	@GET
 	@Path("{identity}/auctions")
 	@Produces({MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML})
 	public List<Auction> getPeopleIdentityAuctions(@PathParam("identity") final long id){
 		final EntityManager em = emf.createEntityManager();
 		List<Auction> l;
-		//TODO: fetch join 
 		try{
-			TypedQuery<Auction> query = em.createQuery("SELECT a FROM Auction a LEFT JOIN a.bids b WHERE a.seller.identity = :id OR b.bidder.identity = :id", Auction.class) //TODO: include bidders :D
+			TypedQuery<Auction> query = em.createQuery("SELECT a FROM Auction a LEFT JOIN a.bids b WHERE a.seller.identity = :id OR b.bidder.identity = :id", Auction.class)
 					.setParameter("id", id);
 			l = query.getResultList();
 		}catch(NoResultException e){
@@ -125,12 +118,16 @@ public class PersonService {
 		return l;
 	}
 	
+	/**
+	 * Returns all bids for closed auctions associated with the bidder matching the given identity.
+	 * @param id
+	 * @return
+	 */
 	@GET
 	@Path("{identity}/bids")
 	@Produces({MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML})
 	public List<Bid> getPeopleIdentityBids(@PathParam("identity") final long id){
 		final EntityManager em = emf.createEntityManager();
-		//TODO -> join with auctions, check closureTimeStamp
 		List<Bid> l = new ArrayList<Bid>();
 		try{
 			long ts = System.currentTimeMillis();
@@ -147,6 +144,51 @@ public class PersonService {
 		return l;
 	}
 	
+	/**
+	 * Creates a new person if the given Person template's identity is zero, or
+	 * otherwise updates the corresponding person with template data. Optionally, a new
+	 * password may be set using the header field “Set-password”. Returns the affected
+	 * person's identity.
+     * @param p
+     * @param pw
+     */
+    @PUT
+    @Consumes(MediaType.APPLICATION_JSON)
+    public void setPerson(Person p, @HeaderParam("Set-password") final String pw){
+        final EntityManager em = emf.createEntityManager();
+        try{
+        	if(p.getIdentity() == 0){
+                em.getTransaction().begin();
+                
+                // set password hash
+                // example hash 2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824
+                // meaning hello
+                p.setPasswordHash(Person.passwordHash(pw));
+                
+                // set default avatar
+                p.setAvatar(new Document("hey.png", "application/image-png", new byte[]{}, new byte[]{}));
+                em.persist(p);
+                em.getTransaction().commit();
+        	}else{
+        		em.getTransaction().begin();
+        		Person toUpdate = em.find(Person.class, p.getIdentity());
+        		if(p.getAlias() != null) toUpdate.setAlias(p.getAlias());
+        		if(p.getGroup() != null) toUpdate.setGroup(p.getGroup());
+        		if(p.getName() != null) toUpdate.setName(p.getName());
+        		if(p.getAddress() != null) toUpdate.setAddress(p.getAddress());
+        		if(p.getContact() != null) toUpdate.setContact(p.getContact());
+        		if(pw != "") toUpdate.setPasswordHash(Person.passwordHash(pw));
+        		em.getTransaction().commit();
+        	}
+        }finally{
+            if(em.getTransaction().isActive()){
+                System.out.println("Entity Manager Rollback");
+                em.getTransaction().rollback();
+            }   
+            em.clear();
+            em.close();
+        }
+    }
 	
 	/* Services for avatar */
 	@GET
