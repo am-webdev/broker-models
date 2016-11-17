@@ -157,7 +157,7 @@ public class PersonService {
     public void setPerson(Person p, @HeaderParam("Set-password") final String pw){
         final EntityManager em = emf.createEntityManager();
         try{
-        	if(p.getIdentity() == 0){
+        	if(p.getIdentity() == 0){ // create new Person
                 em.getTransaction().begin();
                 
                 // set password hash
@@ -169,7 +169,7 @@ public class PersonService {
                 p.setAvatar(new Document("hey.png", "application/image-png", new byte[]{}, new byte[]{}));
                 em.persist(p);
                 em.getTransaction().commit();
-        	}else{
+        	}else{ // update existing Person
         		em.getTransaction().begin();
         		Person toUpdate = em.find(Person.class, p.getIdentity());
         		if(p.getAlias() != null) toUpdate.setAlias(p.getAlias());
