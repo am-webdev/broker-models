@@ -3,6 +3,7 @@ package de.sb.broker.model;
 import javax.persistence.Column;
 import javax.persistence.DiscriminatorValue;
 import javax.persistence.Entity;
+import javax.persistence.Lob;
 import javax.persistence.PrimaryKeyJoinColumn;
 import javax.persistence.Table;
 import javax.validation.constraints.Size;
@@ -21,6 +22,7 @@ public class Document extends BaseEntity {
 	@Size(min = 1, max = 50)
 	private String type;
 
+	@Lob()
 	@Column(name = "content", updatable=false, nullable=false, insertable=true)
 	private byte[] content;
 

@@ -5,6 +5,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -22,6 +23,7 @@ import javax.persistence.metamodel.Metamodel;
 import javax.validation.constraints.Size;
 import javax.ws.rs.GET;
 import javax.ws.rs.HeaderParam;
+import javax.ws.rs.POST;
 import javax.ws.rs.PUT;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
@@ -30,6 +32,7 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.ResponseBuilder;
 import javax.ws.rs.Consumes;
+import javax.ws.rs.Encoded;
 import javax.ws.rs.FormParam;
 
 import de.sb.broker.model.Address;
@@ -149,7 +152,7 @@ public class PersonService {
 	@GET
 	@Path("{identity}/avatar")
 	@Produces("image/*")
-	public Response getAvatar(@PathParam("identity")  String id) throws IOException {
+	public Response getAvatar(@PathParam("identity")  String id) throws Exception {
 		// Select from Database
 		final EntityManager em = emf.createEntityManager();
 		Document d = null;
@@ -158,8 +161,8 @@ public class PersonService {
 					.createQuery("SELECT d FROM Document d RIGHT JOIN Person p WHERE p.identity = :id", Document.class)
 					.setParameter("id", id);
 			d = query.getSingleResult();
-		}catch(NoResultException e){
-			// TODO			
+		}catch(Exception e){
+			throw e;
 		}finally{
 			if(em.getTransaction().isActive()) em.getTransaction().rollback();
 			em.close();
@@ -185,19 +188,17 @@ public class PersonService {
 	@Consumes(MediaType.MULTIPART_FORM_DATA)
 	public Response setAvatar(
 			@PathParam("identity")  String id,
-			@FormParam("file") ByteArrayInputStream byteArrayInputStream,
-			@FormParam("type") String type,
-			@FormParam("title") String title,
-			@FormParam("hash") byte[] hash) {
+			@Encoded byte[] byteArray,
+			@Encoded @FormParam("type") String type,
+			@Encoded @FormParam("name") String name,
+			@Encoded @FormParam("hash") String hash) throws Exception {
 		
 		final EntityManager em = emf.createEntityManager();
 		
 		String status = "Upload has been successful";
 		Person p;
 		
-		// data = new ByteArrayInputStream(byteArrayInputStream).read();
-		
-		Document d = new Document(title, type, null, hash);
+		Document d = new Document(name, type, byteArray, hash.getBytes(StandardCharsets.UTF_8));
 		
 		try{
 			TypedQuery<Person> query = em
@@ -205,24 +206,24 @@ public class PersonService {
 					.setParameter("id", id);
 			p = query.getSingleResult();
 		}catch(NoResultException e){
-			p = new Person();
+			throw e;
 		}finally{
 			if(em.getTransaction().isActive()) em.getTransaction().rollback();
 			em.close();
 		}
 		
-	
-		try {
-			// TODO Insert into DB
-		} catch (Exception e) {
-			status = "Upload has failed";
-			e.printStackTrace();
-		} finally {
+		try{
+			em.getTransaction().begin();
+			p.setAvatar(d);
+			em.find(Person.class, p.getIdentity());
+			em.merge(p);
+			em.merge(d);
+			em.getTransaction().commit();
+		}finally{
 			if(em.getTransaction().isActive()) em.getTransaction().rollback();
 			em.close();
 		}
 
 		return Response.status(200).entity(status).build();
-		// TODO
 	}
 }
