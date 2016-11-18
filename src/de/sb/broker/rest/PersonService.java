@@ -20,6 +20,7 @@ import javax.persistence.criteria.CriteriaQuery;
 import javax.persistence.criteria.Root;
 import javax.persistence.metamodel.EntityType;
 import javax.persistence.metamodel.Metamodel;
+import javax.validation.Valid;
 import javax.validation.constraints.Size;
 import javax.ws.rs.GET;
 import javax.ws.rs.HeaderParam;
@@ -147,14 +148,15 @@ public class PersonService {
 	/**
 	 * Creates a new person if the given Person template's identity is zero, or
 	 * otherwise updates the corresponding person with template data. Optionally, a new
-	 * password may be set using the header field “Set-password”. Returns the affected
+	 * password may be set using the header field â€œSet-passwordâ€�. Returns the affected
 	 * person's identity.
      * @param p
      * @param pw
      */
+	//TODO rename Peson p -> tmp and toUpdate -> p
     @PUT
     @Consumes(MediaType.APPLICATION_JSON)
-    public void setPerson(Person p, @HeaderParam("Set-password") final String pw){
+    public void setPerson(@Valid Person p, @HeaderParam("Set-password") final String pw){
         final EntityManager em = emf.createEntityManager();
         try{
         	if(p.getIdentity() == 0){ // create new Person
@@ -227,14 +229,17 @@ public class PersonService {
 
 	@PUT
 	@Path("{identity}/avatar")
-	@Consumes(MediaType.MULTIPART_FORM_DATA)
+	@Consumes(MediaType.WILDCARD)
 	public Response setAvatar(
 			@PathParam("identity")  String id,
 			@Encoded byte[] byteArray,
 			@Encoded @FormParam("type") String type,
 			@Encoded @FormParam("name") String name,
 			@Encoded @FormParam("hash") String hash) throws Exception {
-		
+		//Headerparam -> mimetype (nur file wird hochgeladen im body) 
+		//Hash wird berechnet
+		//TODO Document haben keinen namen!
+		// -> es gibt keine Form Params
 		final EntityManager em = emf.createEntityManager();
 		
 		String status = "Upload has been successful";

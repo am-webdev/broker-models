@@ -144,6 +144,7 @@ public class LifeCycleProvider implements ContainerRequestFilter, ContainerRespo
 	 * @return the mapped response
 	 * @throws NullPointerException if the given argument is {@code null}
 	 */
+	//TODO check for exceptions
 	public Response toResponse (final Throwable exception) throws NullPointerException {
 		final Response response = exception instanceof WebApplicationException
 			? ((WebApplicationException) exception).getResponse()
