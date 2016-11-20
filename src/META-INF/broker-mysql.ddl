@@ -62,7 +62,6 @@ CREATE TABLE Bid (
 
 CREATE TABLE Document (
 	documentIdentity BIGINT NOT NULL,
-	name VARCHAR(50) NOT NULL,
 	type VARCHAR(50) NOT NULL,
 	content LONGBLOB NOT NULL,
 	hash BINARY(32) NOT NULL,

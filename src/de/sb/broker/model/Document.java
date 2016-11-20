@@ -13,10 +13,6 @@ import javax.validation.constraints.Size;
 @PrimaryKeyJoinColumn(name = "documentIdentity")	
 @DiscriminatorValue("Document")					
 public class Document extends BaseEntity {
-
-	@Column(name = "name", updatable=false, nullable=false, insertable=true)
-	@Size(min = 1, max = 50)
-	private String name;		// TODO TBD
 	
 	@Column(name = "type", updatable=false, nullable=false, insertable=true)
 	@Size(min = 1, max = 50)
@@ -31,21 +27,16 @@ public class Document extends BaseEntity {
 	private byte[] hash;
 	
 	protected Document() {
-		this(null, null, null, null);
+		this(null, null, null);
 	}
 
-	public Document(String name, String type, byte[] content, byte[] hash) {
-		this.name = name;
+	public Document(String type, byte[] content, byte[] hash) {
 		this.type = type;
 		this.content = content;
 		this.hash = hash;	
 	}
 
 	/* GETTER */
-	
-	public String getName() {
-		return this.name;
-	}
 	
 	public String getType() {
 		return this.type;
@@ -59,4 +50,9 @@ public class Document extends BaseEntity {
 		return this.hash;
 	}
 	
+	/* SETTER */
+	
+	public void setType(String mimetype) {
+		this.type = mimetype;
+	}	
 }

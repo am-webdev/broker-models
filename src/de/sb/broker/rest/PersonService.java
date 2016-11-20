@@ -2,13 +2,21 @@ package de.sb.broker.rest;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.net.URLConnection;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.security.MessageDigest;
 import java.util.ArrayList;
 import java.util.List;
 
+import javax.activation.MimetypesFileTypeMap;
 import javax.persistence.Column;
 import javax.persistence.EntityManager;
 import javax.persistence.EntityManagerFactory;
@@ -20,7 +28,6 @@ import javax.persistence.criteria.CriteriaQuery;
 import javax.persistence.criteria.Root;
 import javax.persistence.metamodel.EntityType;
 import javax.persistence.metamodel.Metamodel;
-import javax.validation.Valid;
 import javax.validation.constraints.Size;
 import javax.ws.rs.GET;
 import javax.ws.rs.HeaderParam;
@@ -29,9 +36,15 @@ import javax.ws.rs.PUT;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
+import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Request;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.ResponseBuilder;
+
+import com.sun.corba.se.spi.ior.Identifiable;
+
+import javax.ws.rs.ClientErrorException;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.Encoded;
 import javax.ws.rs.FormParam;
@@ -42,6 +55,8 @@ import de.sb.broker.model.Bid;
 import de.sb.broker.model.Contact;
 import de.sb.broker.model.Name;
 import de.sb.broker.model.Person;
+import sun.font.LayoutPathImpl.SegmentPath;
+import sun.misc.IOUtils;
 import de.sb.broker.model.Document;
 
 @Path("people")
@@ -49,10 +64,6 @@ public class PersonService {
 	
 	private static final EntityManagerFactory emf = Persistence.createEntityManagerFactory("broker");
 	
-	/**
-	 * Returns the people matching the given criteria, with null or missing parameters identifying omitted criteria.
-	 * @return
-	 */
 	@GET
 	@Produces({MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML})
 	public List<Person> getPeople(){
@@ -70,11 +81,26 @@ public class PersonService {
 		return l;
 	}
 	
-	/**
-	 * Returns the person matching the given identity.
-	 * @param id
-	 * @return
-	 */
+	@PUT
+	@Consumes(MediaType.APPLICATION_JSON)
+	public void setPerson(Person p, @HeaderParam("Set-password") final String pw){
+		final EntityManager em = emf.createEntityManager();
+		try{
+			em.getTransaction().begin();
+			
+			p.setPasswordHash(Person.passwordHash(pw));
+			Document d = new Document("application/image-png", new byte[]{0,0,1,0}, new byte[]{0,0,1,0});
+			p.setAvatar(d);
+			em.find(Person.class, p.getIdentity());
+			em.merge(p);
+			em.merge(d);
+			em.getTransaction().commit();
+		}finally{
+			if(em.getTransaction().isActive()) em.getTransaction().rollback();
+			em.close();
+		}
+	}
+	
 	@GET
 	@Path("{identity}")
 	@Produces({MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML})
@@ -95,19 +121,15 @@ public class PersonService {
 		return p;
 	}
 	
-	/**
-	 * Returns all auctions associated with the person matching the given identity (as seller or bidder).
-	 * @param id
-	 * @return
-	 */
 	@GET
 	@Path("{identity}/auctions")
 	@Produces({MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML})
 	public List<Auction> getPeopleIdentityAuctions(@PathParam("identity") final long id){
 		final EntityManager em = emf.createEntityManager();
 		List<Auction> l;
+		//TODO: fetch join 
 		try{
-			TypedQuery<Auction> query = em.createQuery("SELECT a FROM Auction a LEFT JOIN a.bids b WHERE a.seller.identity = :id OR b.bidder.identity = :id", Auction.class)
+			TypedQuery<Auction> query = em.createQuery("SELECT a FROM Auction a LEFT JOIN a.bids b WHERE a.seller.identity = :id OR b.bidder.identity = :id", Auction.class) //TODO: include bidders :D
 					.setParameter("id", id);
 			l = query.getResultList();
 		}catch(NoResultException e){
@@ -119,16 +141,12 @@ public class PersonService {
 		return l;
 	}
 	
-	/**
-	 * Returns all bids for closed auctions associated with the bidder matching the given identity.
-	 * @param id
-	 * @return
-	 */
 	@GET
 	@Path("{identity}/bids")
 	@Produces({MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML})
 	public List<Bid> getPeopleIdentityBids(@PathParam("identity") final long id){
 		final EntityManager em = emf.createEntityManager();
+		//TODO -> join with auctions, check closureTimeStamp
 		List<Bid> l = new ArrayList<Bid>();
 		try{
 			long ts = System.currentTimeMillis();
@@ -145,52 +163,6 @@ public class PersonService {
 		return l;
 	}
 	
-	/**
-	 * Creates a new person if the given Person template's identity is zero, or
-	 * otherwise updates the corresponding person with template data. Optionally, a new
-	 * password may be set using the header field â€œSet-passwordâ€�. Returns the affected
-	 * person's identity.
-     * @param p
-     * @param pw
-     */
-	//TODO rename Peson p -> tmp and toUpdate -> p
-    @PUT
-    @Consumes(MediaType.APPLICATION_JSON)
-    public void setPerson(@Valid Person p, @HeaderParam("Set-password") final String pw){
-        final EntityManager em = emf.createEntityManager();
-        try{
-        	if(p.getIdentity() == 0){ // create new Person
-                em.getTransaction().begin();
-                
-                // set password hash
-                // example hash 2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824
-                // meaning hello
-                p.setPasswordHash(Person.passwordHash(pw));
-                
-                // set default avatar
-                p.setAvatar(new Document("hey.png", "application/image-png", new byte[]{}, new byte[]{}));
-                em.persist(p);
-                em.getTransaction().commit();
-        	}else{ // update existing Person
-        		em.getTransaction().begin();
-        		Person toUpdate = em.find(Person.class, p.getIdentity());
-        		if(p.getAlias() != null) toUpdate.setAlias(p.getAlias());
-        		if(p.getGroup() != null) toUpdate.setGroup(p.getGroup());
-        		if(p.getName() != null) toUpdate.setName(p.getName());
-        		if(p.getAddress() != null) toUpdate.setAddress(p.getAddress());
-        		if(p.getContact() != null) toUpdate.setContact(p.getContact());
-        		if(pw != "") toUpdate.setPasswordHash(Person.passwordHash(pw));
-        		em.getTransaction().commit();
-        	}
-        }finally{
-            if(em.getTransaction().isActive()){
-                System.out.println("Entity Manager Rollback");
-                em.getTransaction().rollback();
-            }   
-            em.clear();
-            em.close();
-        }
-    }
 	
 	/* Services for avatar */
 	@GET
@@ -223,7 +195,7 @@ public class PersonService {
 		out.flush();
 	     
 		ResponseBuilder builder = Response.ok(out.toByteArray());
-		builder.header("Content-Disposition", "attachment; filename=" + d.getName());
+		builder.header("Content-Disposition", "attachment; filename=avatar");
 		return builder.build();
     }
 
@@ -232,45 +204,127 @@ public class PersonService {
 	@Consumes(MediaType.WILDCARD)
 	public Response setAvatar(
 			@PathParam("identity")  String id,
-			@Encoded byte[] byteArray,
-			@Encoded @FormParam("type") String type,
-			@Encoded @FormParam("name") String name,
-			@Encoded @FormParam("hash") String hash) throws Exception {
-		//Headerparam -> mimetype (nur file wird hochgeladen im body) 
-		//Hash wird berechnet
-		//TODO Document haben keinen namen!
-		// -> es gibt keine Form Params
-		final EntityManager em = emf.createEntityManager();
+			byte[] fileBytes) throws Exception  {
 		
-		String status = "Upload has been successful";
-		Person p;
+		// Entitiy Manager used several times, but closed after each transition
+    	final EntityManager em = emf.createEntityManager();
+    	Document uploadedDocument = null;
+    	Long personIdentity = Long.parseLong(id);
 		
-		Document d = new Document(name, type, byteArray, hash.getBytes(StandardCharsets.UTF_8));
-		
-		try{
-			TypedQuery<Person> query = em
-					.createQuery("SELECT p FROM Person p WHERE p.identity = :id", Person.class)
-					.setParameter("id", id);
-			p = query.getSingleResult();
-		}catch(NoResultException e){
-			throw e;
-		}finally{
-			if(em.getTransaction().isActive()) em.getTransaction().rollback();
-			em.close();
+		/*
+		 * Read from Array of Bytes to temporary File "outputfile"
+		 */
+		File outputFile = new File("avatar");
+		FileOutputStream outputStream = new FileOutputStream(outputFile);
+	    try {
+	        outputStream.write(fileBytes);  //write the bytes and your done. 
+	    } finally {
+			System.out.println("Describe content:\n\tByte-length (Origin): " + fileBytes.length +
+					"\tByte-length (Output): " + outputFile.length());
 		}
 		
+		/*
+		 * Get MIME Type based on file
+		 */		
+	    MimetypesFileTypeMap mimeTypesMap = new MimetypesFileTypeMap();
+		String mimeType = mimeTypesMap.getContentType(outputFile);
+		System.out.println("\tMIME-Type: " + mimeType);
+
+		/*
+		 * Calculate SHA-256 Hash of input bytes
+		 */
+	    MessageDigest md = MessageDigest.getInstance("SHA-256");
+        FileInputStream fileInputSteam = new FileInputStream(outputFile.getPath());
+
+        int nread = 0;
+        while ((nread = fileInputSteam.read(fileBytes)) != -1) {
+          md.update(fileBytes, 0, nread);
+        };
+        byte[] mdbytes = md.digest();
+        StringBuffer hexString = new StringBuffer();
+    	for (int i=0;i<mdbytes.length;i++) {
+    	  hexString.append(Integer.toHexString(0xFF & mdbytes[i]));
+    	}
+    	String sha256Hash = hexString.toString();
+    	System.out.println("\tSHA-265: " + sha256Hash);
+    	
+		uploadedDocument = new Document(mimeType, fileBytes, mdbytes);
+	    
+		/*
+		 * find matching avatar based on newly created hash 
+		 */
+		List<Document> l;
 		try{
-			em.getTransaction().begin();
-			p.setAvatar(d);
-			em.find(Person.class, p.getIdentity());
-			em.merge(p);
-			em.merge(d);
-			em.getTransaction().commit();
+			TypedQuery<Document> q = em.createQuery("SELECT d FROM Document d WHERE d.hash = :hash", Document.class)
+					.setParameter("hash", uploadedDocument.getHash());	// value is stored as "byte[32] --> cannot compare with String
+			l =  q.getResultList();
+		}catch(NoResultException e){
+			l = new ArrayList<Document>();
 		}finally{
 			if(em.getTransaction().isActive()) em.getTransaction().rollback();
-			em.close();
+			em.clear();
+		}
+		System.out.println("Matching entries for given hash ("+ sha256Hash +"): " + l.size());
+		
+		
+		/*
+		 * Depending on result length, either a new entry should be stored 
+		 * or the MIME type should be updated
+		 */
+	
+		try {
+			if(l.size() == 0) { // creates new avatar
+				em.getTransaction().begin();
+				em.persist(uploadedDocument);
+				em.getTransaction().commit();
+				System.out.println("saved new avatar to db: " + uploadedDocument.toString());
+			} else { // Update existing avatar
+				if (uploadedDocument.getType().equals(l.get(0).getType())) {	// Check of Mime type needs to be updated
+					em.getTransaction().begin();
+					Document avatar = em.find(Document.class, l.get(0).getIdentity());
+					avatar.setVersion(avatar.getVersion());
+					avatar.setType(uploadedDocument.getType());
+					em.merge(avatar);
+					em.getTransaction().commit();
+					System.out.println("saved updated avatar within db: " + uploadedDocument.toString());
+				} else {
+					System.out.println("Nothing to do in here");
+				}
+			}
+		}finally{
+	        if(em.getTransaction().isActive()){
+	            System.out.println("Entity Manager Rollback");
+	            em.getTransaction().rollback();
+	        }
+	        em.clear();
+		}
+		
+
+		/*
+		 * Identify person that should be updated
+		 * save new avatar to person
+		 * commit updated person
+		 */
+		
+		try {
+			em.getTransaction().begin();
+			Person person = em.find(Person.class, personIdentity);
+			if (uploadedDocument.getContent().length != 0) {
+				person.setAvatar(uploadedDocument);
+			} else {
+				person.setAvatar(new Document("", new byte[32], new byte[32]));
+				System.out.println("clear avatar of person");
+			}
+			em.merge(person);
+			em.getTransaction().commit();
+		} finally {
+	        if(em.getTransaction().isActive()){
+	            System.out.println("Entity Manager Rollback");
+	            em.getTransaction().rollback();
+	        }
+	        em.close();
 		}
 
-		return Response.status(200).entity(status).build();
+		return null;
 	}
 }
