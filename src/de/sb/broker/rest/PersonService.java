@@ -172,17 +172,26 @@ public class PersonService {
 		// Select from Database
 		final EntityManager em = emf.createEntityManager();
 		Document d = null;
+		long personIdentity = Long.getLong(id);
 		try{
+			/*
+			 * Working MySQL Statement:
+			 * SELECT * FROM Document d 
+			 * JOIN Person p ON d.documentIdentity 
+			 * WHERE p.avatarReference = d.documentIdentity 
+			 * AND p.personIdentity = :id
+			 * 
+			 * TODO implement as JPQL query
+			 */
 			TypedQuery<Document> query = em
-					.createQuery("SELECT d FROM Document d RIGHT JOIN Person p WHERE p.identity = :id", Document.class)
-					.setParameter("id", id);
+					.createQuery("SELECT d FROM Document d JOIN Person p WHERE p.identity = :id", Document.class)
+					.setParameter("id", personIdentity);
 			d = query.getSingleResult();
-		}catch(Exception e){
-			throw e;
-		}finally{
+		} finally{
 			if(em.getTransaction().isActive()) em.getTransaction().rollback();
 			em.close();
 		}
+		System.out.println(d);
 	 
 		final ByteArrayInputStream in = new ByteArrayInputStream(d.getContent());
 	   
