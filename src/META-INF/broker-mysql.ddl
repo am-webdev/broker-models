@@ -26,7 +26,7 @@ CREATE TABLE Person (
 	city VARCHAR(63) NOT NULL,
 	email VARCHAR(63) NOT NULL,
 	phone VARCHAR(63) NULL,
-	avatarReference BIGINT NOT NULL,
+	avatarReference BIGINT NULL,
 	PRIMARY KEY (PersonIdentity),
 	UNIQUE KEY (alias),
 	UNIQUE KEY (email),
