@@ -174,38 +174,61 @@ public class PersonService {
 	//TODO rename Peson p -> tmp and toUpdate -> p
     @PUT
     @Consumes(MediaType.APPLICATION_JSON)
-    public void setPerson(@Valid Person p, @HeaderParam("Set-password") final String pw){
+    public void createPerson(@Valid Person p, @HeaderParam("Set-password") final String pw){
         final EntityManager em = emf.createEntityManager();
+        System.out.println(p);
         try{
-        	if(p.getIdentity() == 0){ // create new Person
-                em.getTransaction().begin();
-                
-                // set password hash
-                // example hash 2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824
-                // meaning hello
-                p.setPasswordHash(Person.passwordHash(pw));
-                
-                // set default avatar
-                p.setAvatar(new Document("application/image-png", new byte[]{}, new byte[]{}));
-                em.persist(p);
-                em.getTransaction().commit();
-        	}else{ // update existing Person
-        		em.getTransaction().begin();
-        		Person toUpdate = em.find(Person.class, p.getIdentity());
-        		if(p.getAlias() != null) toUpdate.setAlias(p.getAlias());
-        		if(p.getGroup() != null) toUpdate.setGroup(p.getGroup());
-        		if(p.getName() != null) toUpdate.setName(p.getName());
-        		if(p.getAddress() != null) toUpdate.setAddress(p.getAddress());
-        		if(p.getContact() != null) toUpdate.setContact(p.getContact());
-        		if(pw != "") toUpdate.setPasswordHash(Person.passwordHash(pw));
-        		em.getTransaction().commit();
-        	}
+            em.getTransaction().begin();
+            
+            // set password hash
+            // example hash 2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824
+            // meaning hello
+            p.setPasswordHash(Person.passwordHash(pw));
+            
+            // set default avatar - obsolete, field can be NULL
+            // p.setAvatar(new Document("application/image-png", new byte[]{}, new byte[]{}));
+            em.persist(p);
+            em.getTransaction().commit();
         }finally{
             if(em.getTransaction().isActive()){
                 System.out.println("Entity Manager Rollback");
                 em.getTransaction().rollback();
             }   
-            em.clear();
+            em.close();
+        }
+    }
+	/**
+	 * Creates a new person if the given Person template's identity is zero, or
+	 * otherwise updates the corresponding person with template data. Optionally, a new
+	 * password may be set using the header field â€œSet-passwordâ€�. Returns the affected
+	 * person's identity.
+     * @param p
+     * @param pw
+     */
+	//TODO rename Peson p -> tmp and toUpdate -> p
+    @PUT
+	@Path("{identity}")
+    @Consumes(MediaType.APPLICATION_JSON)
+    public void updatePerson(@Valid Person p,
+    		@HeaderParam("Set-password") final String pw,
+    		@PathParam("identity") final Long personIdentity) {
+        final EntityManager em = emf.createEntityManager();
+        System.out.println(p);
+        try{
+    		em.getTransaction().begin();
+    		Person toUpdate = em.find(Person.class, personIdentity);
+    		if(p.getAlias() != null) toUpdate.setAlias(p.getAlias());
+    		if(p.getGroup() != null) toUpdate.setGroup(p.getGroup());
+    		if(p.getName() != null) toUpdate.setName(p.getName());
+    		if(p.getAddress() != null) toUpdate.setAddress(p.getAddress());
+    		if(p.getContact() != null) toUpdate.setContact(p.getContact());
+    		if(pw != "") toUpdate.setPasswordHash(Person.passwordHash(pw));
+    		em.getTransaction().commit();
+        }finally{
+            if(em.getTransaction().isActive()){
+                System.out.println("Entity Manager Rollback");
+                em.getTransaction().rollback();
+            }   
             em.close();
         }
     }

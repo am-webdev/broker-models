@@ -3,6 +3,7 @@ package de.sb.broker.model;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -36,7 +37,7 @@ import javax.xml.bind.annotation.XmlType;
 @XmlType
 @XmlRootElement
 public class Person extends BaseEntity {
-	
+
 	public static enum Group {
 		ADMIN, USER
 	}
@@ -172,5 +173,12 @@ public class Person extends BaseEntity {
 
 	public void setAvatar(Document avatar) {
 		this.avatar = avatar;
-	}	
+	}
+	
+	@Override
+	public String toString() {
+		return "Person [identity="+ getIdentity() + "alias=" + alias + ", passwordHash=" + Arrays.toString(passwordHash) + ", group=" + group
+				+ ", name=" + name + ", address=" + address + ", contact=" + contact + ", avatar=" + avatar
+				+ ", auctions=" + auctions + ", bids=" + bids +"]";
+	}
 }
