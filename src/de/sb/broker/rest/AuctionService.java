@@ -55,11 +55,11 @@ public class AuctionService {
 	 */
 	@PUT
 	@Produces(MediaType.APPLICATION_XML)
-	public void createAuction(@Valid Auction a){
+	public void createAuction(@Valid Auction tmp){
 		final EntityManager em = emf.createEntityManager();
 		try{
 			em.getTransaction().begin();
-			em.persist(a);
+			em.persist(tmp);
 			em.getTransaction().commit();
 		}finally{
 	        if(em.getTransaction().isActive()){
@@ -77,19 +77,19 @@ public class AuctionService {
 	 */
 	@PUT
 	@Produces(MediaType.APPLICATION_XML)
-	public void updateAuction(@Valid Auction a){
+	public void updateAuction(@Valid Auction tmp){
 		final EntityManager em = emf.createEntityManager();
 		try{
 			em.getTransaction().begin();
-			Auction toUpdate = em.find(Auction.class, a.getIdentity());
-			if(!toUpdate.isClosed() && toUpdate.getBids().size() <= 0){ // update auction
-				if(a.getAskingPrice() != 0) toUpdate.setAskingPrice(a.getAskingPrice());
-				if(a.getClosureTimestamp() != 0) toUpdate.setClosureTimestamp(a.getClosureTimestamp());
-				if(a.getDescription() != null) toUpdate.setDescription(a.getDescription());
-				if(a.getSeller() != null) toUpdate.setSeller(a.getSeller());
-				if(a.getTitle() != null) toUpdate.setTitle(a.getTitle());
-				if(a.getUnitCount() != 0)toUpdate.setUnitCount(a.getUnitCount());
-				if(a.getVersion() != 0)toUpdate.setVersion(a.getVersion());
+			Auction a = em.find(Auction.class, tmp.getIdentity());
+			if(!a.isClosed() && a.getBids().size() <= 0){ // update auction
+				if(tmp.getAskingPrice() != 0) a.setAskingPrice(tmp.getAskingPrice());
+				if(tmp.getClosureTimestamp() != 0) a.setClosureTimestamp(tmp.getClosureTimestamp());
+				if(tmp.getDescription() != null) a.setDescription(tmp.getDescription());
+				if(tmp.getSeller() != null) a.setSeller(tmp.getSeller());
+				if(tmp.getTitle() != null) a.setTitle(tmp.getTitle());
+				if(tmp.getUnitCount() != 0)a.setUnitCount(tmp.getUnitCount());
+				if(tmp.getVersion() != 0)a.setVersion(tmp.getVersion());
 			}
 			em.getTransaction().commit();
 		}finally{
