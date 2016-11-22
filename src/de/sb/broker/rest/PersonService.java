@@ -12,6 +12,7 @@ import java.io.OutputStream;
 import java.net.URLConnection;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.security.MessageDigest;
 import java.util.ArrayList;
 import java.util.List;
@@ -25,6 +26,7 @@ import javax.persistence.Persistence;
 import javax.persistence.TypedQuery;
 import javax.persistence.criteria.CriteriaBuilder;
 import javax.persistence.criteria.CriteriaQuery;
+import javax.persistence.criteria.ParameterExpression;
 import javax.persistence.criteria.Root;
 import javax.persistence.metamodel.EntityType;
 import javax.persistence.metamodel.Metamodel;
@@ -167,43 +169,28 @@ public class PersonService {
 	/* Services for avatar */
 	@GET
 	@Path("{identity}/avatar")
-	@Produces("image/*")
-	public Response getAvatar(@PathParam("identity")  String id) throws Exception {
+	@Produces(MediaType.WILDCARD)
+	public Response getAvatar(@PathParam("identity") final Long personIdentity) throws Exception {
 		// Select from Database
 		final EntityManager em = emf.createEntityManager();
 		Document d = null;
-		long personIdentity = Long.getLong(id);
-		try{
-			/*
-			 * Working MySQL Statement:
-			 * SELECT * FROM Document d 
-			 * JOIN Person p ON d.documentIdentity 
-			 * WHERE p.avatarReference = d.documentIdentity 
-			 * AND p.personIdentity = :id
-			 * 
-			 * TODO implement as JPQL query
-			 */
-			TypedQuery<Document> query = em
-					.createQuery("SELECT d FROM Document d JOIN Person p WHERE p.identity = :id", Document.class)
-					.setParameter("id", personIdentity);
-			d = query.getSingleResult();
+		Person p = null;
+		try{			
+			// with CriteriaQuery
+			CriteriaBuilder cb = em.getCriteriaBuilder();
+			CriteriaQuery<Person> q = cb.createQuery(Person.class);
+			Root<Person> rootPerson = q.from(Person.class);
+			q.where(cb.equal(rootPerson.get("identity"), personIdentity));
+			
+			d = em.createQuery(q).getSingleResult().getAvatar();
+			
 		} finally{
 			if(em.getTransaction().isActive()) em.getTransaction().rollback();
 			em.close();
 		}
-		System.out.println(d);
-	 
-		final ByteArrayInputStream in = new ByteArrayInputStream(d.getContent());
-	   
-		ByteArrayOutputStream out = new ByteArrayOutputStream();
-		int data = in.read();
-		while (data >= 0) {
-			out.write((char) data);
-			data = in.read();
-		}
-		out.flush();
 	     
-		ResponseBuilder builder = Response.ok(out.toByteArray());
+		ResponseBuilder builder = Response.ok(d.getContent());
+		builder.header("Content-Type", d.getType());
 		builder.header("Content-Disposition", "attachment; filename=avatar");
 		return builder.build();
     }
@@ -212,13 +199,12 @@ public class PersonService {
 	@Path("{identity}/avatar")
 	@Consumes(MediaType.WILDCARD)
 	public Response setAvatar(
-			@PathParam("identity")  String id,
+			@PathParam("identity")  final long personIdentity,
 			byte[] fileBytes) throws Exception  {
 		
 		// Entitiy Manager used several times, but closed after each transition
     	final EntityManager em = emf.createEntityManager();
     	Document uploadedDocument = null;
-    	Long personIdentity = Long.parseLong(id);
 		
 		/*
 		 * Read from Array of Bytes to temporary File "outputfile"
@@ -252,7 +238,7 @@ public class PersonService {
         byte[] mdbytes = md.digest();
         StringBuffer hexString = new StringBuffer();
     	for (int i=0;i<mdbytes.length;i++) {
-    	  hexString.append(Integer.toHexString(0xFF & mdbytes[i]));
+    		hexString.append(Integer.toHexString(0xFF & mdbytes[i]));
     	}
     	String sha256Hash = hexString.toString();
     	System.out.println("\tSHA-265: " + sha256Hash);
@@ -293,7 +279,7 @@ public class PersonService {
 					Document avatar = em.find(Document.class, l.get(0).getIdentity());
 					avatar.setVersion(avatar.getVersion());
 					avatar.setType(uploadedDocument.getType());
-					em.merge(avatar);
+					// em.merge(avatar);
 					em.getTransaction().commit();
 					System.out.println("saved updated avatar within db: " + uploadedDocument.toString());
 				} else {
@@ -318,8 +304,9 @@ public class PersonService {
 		try {
 			em.getTransaction().begin();
 			Person person = em.find(Person.class, personIdentity);
+			Document doc = em.find(Document.class, l.get(0).getIdentity());
 			if (uploadedDocument.getContent().length != 0) {
-				person.setAvatar(uploadedDocument);
+				person.setAvatar(doc);
 			} else {
 				person.setAvatar(new Document("", new byte[32], new byte[32]));
 				System.out.println("clear avatar of person");
