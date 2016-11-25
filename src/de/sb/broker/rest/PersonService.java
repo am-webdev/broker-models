@@ -18,6 +18,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import javax.activation.MimetypesFileTypeMap;
+import javax.persistence.Cache;
 import javax.persistence.Column;
 import javax.persistence.EntityManager;
 import javax.persistence.EntityManagerFactory;
@@ -54,6 +55,7 @@ import javax.ws.rs.FormParam;
 
 import de.sb.broker.model.Address;
 import de.sb.broker.model.Auction;
+import de.sb.broker.model.BaseEntity;
 import de.sb.broker.model.Bid;
 import de.sb.broker.model.Contact;
 import de.sb.broker.model.Name;
@@ -66,6 +68,7 @@ import de.sb.broker.model.Document;
 public class PersonService {
 	
 	private static final EntityManagerFactory emf = Persistence.createEntityManagerFactory("broker");
+	private Cache cache = null;
 	
 	/**
 	 * Returns the people matching the given criteria, with null or missing parameters identifying omitted criteria.
@@ -192,8 +195,10 @@ public class PersonService {
             if(em.getTransaction().isActive()){
                 System.out.println("Entity Manager Rollback");
                 em.getTransaction().rollback();
-            }   
+            }
             em.close();
+
+            RestHelper.update2ndLevelCache(em, tmp);
         }
     }
     
