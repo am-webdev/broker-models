@@ -77,12 +77,13 @@ public class AuctionService {
 	 * without bids).
 	 */
 	@PUT
+	@Path("{identity}")
 	@Produces(MediaType.APPLICATION_XML)
-	public void updateAuction(@Valid Auction tmp){
+	public void updateAuction(@Valid Auction tmp, @PathParam("identity") final Long identity){
 		final EntityManager em = emf.createEntityManager();
 		try{
 			em.getTransaction().begin();
-			Auction a = em.find(Auction.class, tmp.getIdentity());
+			Auction a = em.find(Auction.class, identity);
 			if(!a.isClosed() && a.getBids().size() <= 0){ // update auction
 				if(tmp.getAskingPrice() != 0) a.setAskingPrice(tmp.getAskingPrice());
 				if(tmp.getClosureTimestamp() != 0) a.setClosureTimestamp(tmp.getClosureTimestamp());
