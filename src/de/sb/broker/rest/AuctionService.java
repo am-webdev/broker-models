@@ -99,8 +99,8 @@ public class AuctionService {
 	            System.out.println("Entity Manager Rollback");
 	            em.getTransaction().rollback();
 	        }
-	        em.close();
 			RestHelper.update2ndLevelCache(em, tmp);
+	        em.close();
 		}
 	}
 	

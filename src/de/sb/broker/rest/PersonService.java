@@ -166,8 +166,8 @@ public class PersonService {
                 System.out.println("Entity Manager Rollback");
                 em.getTransaction().rollback();
             }
-            em.close();
             RestHelper.update2ndLevelCache(em, tmp);
+            em.close();
         }
     }
     
@@ -201,8 +201,8 @@ public class PersonService {
                 System.out.println("Entity Manager Rollback");
                 em.getTransaction().rollback();
             }   
-            em.close();
 			RestHelper.update2ndLevelCache(em, tmp);
+            em.close();
         }
     }
 	
