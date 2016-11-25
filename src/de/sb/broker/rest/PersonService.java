@@ -1,25 +1,14 @@
 package de.sb.broker.rest;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.OutputStream;
-import java.net.URLConnection;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.security.MessageDigest;
 import java.util.ArrayList;
 import java.util.List;
 
 import javax.activation.MimetypesFileTypeMap;
 import javax.persistence.Cache;
-import javax.persistence.Column;
 import javax.persistence.EntityManager;
 import javax.persistence.EntityManagerFactory;
 import javax.persistence.NoResultException;
@@ -27,42 +16,23 @@ import javax.persistence.Persistence;
 import javax.persistence.TypedQuery;
 import javax.persistence.criteria.CriteriaBuilder;
 import javax.persistence.criteria.CriteriaQuery;
-import javax.persistence.criteria.ParameterExpression;
 import javax.persistence.criteria.Root;
-import javax.persistence.metamodel.EntityType;
-import javax.persistence.metamodel.Metamodel;
 import javax.validation.Valid;
-import javax.validation.constraints.Size;
+import javax.ws.rs.Consumes;
 import javax.ws.rs.GET;
 import javax.ws.rs.HeaderParam;
-import javax.ws.rs.POST;
 import javax.ws.rs.PUT;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
-import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
-import javax.ws.rs.core.Request;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.ResponseBuilder;
 
-import com.sun.corba.se.spi.ior.Identifiable;
-
-import javax.ws.rs.ClientErrorException;
-import javax.ws.rs.Consumes;
-import javax.ws.rs.Encoded;
-import javax.ws.rs.FormParam;
-
-import de.sb.broker.model.Address;
 import de.sb.broker.model.Auction;
-import de.sb.broker.model.BaseEntity;
 import de.sb.broker.model.Bid;
-import de.sb.broker.model.Contact;
-import de.sb.broker.model.Name;
-import de.sb.broker.model.Person;
-import sun.font.LayoutPathImpl.SegmentPath;
-import sun.misc.IOUtils;
 import de.sb.broker.model.Document;
+import de.sb.broker.model.Person;
 
 @Path("people")
 public class PersonService {
