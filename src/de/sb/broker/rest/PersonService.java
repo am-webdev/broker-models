@@ -197,7 +197,6 @@ public class PersonService {
                 em.getTransaction().rollback();
             }
             em.close();
-
             RestHelper.update2ndLevelCache(em, tmp);
         }
     }
@@ -233,6 +232,7 @@ public class PersonService {
                 em.getTransaction().rollback();
             }   
             em.close();
+			RestHelper.update2ndLevelCache(em, tmp);
         }
     }
 	

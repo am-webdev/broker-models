@@ -67,6 +67,7 @@ public class AuctionService {
 	            em.getTransaction().rollback();
 	        }   
 	        em.close();
+			RestHelper.update2ndLevelCache(em, tmp);
 		}
 	}
 	
@@ -98,6 +99,7 @@ public class AuctionService {
 	            em.getTransaction().rollback();
 	        }
 	        em.close();
+			RestHelper.update2ndLevelCache(em, tmp);
 		}
 	}
 	
