@@ -41,7 +41,7 @@ public class AuctionService {
 	){
 		final EntityManager em = emf.createEntityManager();
 		List<Auction> l;
-		LifeCycleProvider.authenticate(authentication);
+		Person requester = LifeCycleProvider.authenticate(authentication);
 		try{			
 			TypedQuery<Auction> query = em.createQuery("SELECT a FROM Auction a", Auction.class);
 			l =  query.getResultList();
@@ -66,35 +66,42 @@ public class AuctionService {
 			@Valid @NotNull Auction template
 	){
 		final EntityManager em = emf.createEntityManager();
+
+		Person requester = LifeCycleProvider.authenticate(authentication);
 		try{
 			if(template.getIdentity() == 0){ // creates new auction
+				template.setSeller(requester);
 				em.getTransaction().begin();
 				em.persist(template);
 				em.getTransaction().commit();
 			}else{
 				em.getTransaction().begin();
 				Auction toUpdate = em.find(Auction.class, template.getIdentity());
-				if(!toUpdate.isClosed() && toUpdate.getBids().size() <= 0){ // update auction
-					if(template.getAskingPrice() != 0) {
-						toUpdate.setAskingPrice(template.getAskingPrice());
-					}
-					if(template.getClosureTimestamp() != 0) {
-						toUpdate.setClosureTimestamp(template.getClosureTimestamp());
-					}
-					if(template.getDescription() != null) {
-						toUpdate.setDescription(template.getDescription());
-					}
-					if(template.getSeller() != null) {
-						toUpdate.setSeller(template.getSeller());
-					}
-					if(template.getTitle() != null) {
-						toUpdate.setTitle(template.getTitle());
-					}
-					if(template.getUnitCount() != 0) {
-						toUpdate.setUnitCount(template.getUnitCount());
-					}
-					if(template.getVersion() != 0) {
-						toUpdate.setVersion(template.getVersion());
+				if(toUpdate.getSeller() == requester) {
+					if(!toUpdate.isClosed() && toUpdate.getBids().size() <= 0){ // update auction
+						if(template.getAskingPrice() != 0) {
+							toUpdate.setAskingPrice(template.getAskingPrice());
+						}
+						if(template.getClosureTimestamp() != 0) {
+							toUpdate.setClosureTimestamp(template.getClosureTimestamp());
+						}
+						if(template.getDescription() != null) {
+							toUpdate.setDescription(template.getDescription());
+						}
+						if(template.getSeller() != null) {
+							toUpdate.setSeller(template.getSeller());
+						}
+						if(template.getTitle() != null) {
+							toUpdate.setTitle(template.getTitle());
+						}
+						if(template.getUnitCount() != 0) {
+							toUpdate.setUnitCount(template.getUnitCount());
+						}
+						if(template.getVersion() != 0) {
+							toUpdate.setVersion(template.getVersion());
+						}
+					} else {
+						// TODO throw ClientErrorException(403)
 					}
 				}
 				em.getTransaction().commit();
@@ -136,5 +143,35 @@ public class AuctionService {
 			em.close();
 		}
 		return l;
+	}
+	
+	/**
+	 * Returns the requester's bid for the given auction, or null if none exists.
+	 * @param id
+	 * @return Bid
+	 */
+	@GET
+	@Path("{identity}/bid")
+	@Produces(MediaType.APPLICATION_XML)
+	public Bid getBidForAuction(
+			@NotNull @HeaderParam ("Authorization") String authentication, 
+			@PathParam("identity") final long id
+	){
+		final EntityManager em = emf.createEntityManager();
+		Person requester = LifeCycleProvider.authenticate(authentication);
+		Bid b;
+		try{			
+			TypedQuery<Bid> query = em
+					.createQuery("SELECT a FROM Auction a RIGHT JOIN a.bids b WHERE a.seller.identity = :id AND b.bidder.identity = ", Bid.class)
+					.setParameter("id", id)
+					.setParameter("pid", requester.getIdentity());
+			b =  query.getSingleResult();
+		}catch(NoResultException e){
+			b = null;
+		}finally{
+			if(em.getTransaction().isActive()) em.getTransaction().rollback();
+			em.close();
+		}
+		return b;
 	}
 }
