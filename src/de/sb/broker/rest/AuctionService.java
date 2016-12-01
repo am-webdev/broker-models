@@ -43,10 +43,10 @@ public class AuctionService {
 			TypedQuery<Auction> query = em.createQuery("SELECT a FROM Auction a", Auction.class);
 			l =  query.getResultList();
 		} catch(NoResultException e){
-			throw new ClientErrorException(404);
+			throw new ClientErrorException(e.getMessage(), 404);
 			//l = new ArrayList<Auction>();
 		} catch(Exception e) {
-			throw e;
+			throw new ClientErrorException(e.getMessage(), 500);
 		} finally{
 			if(em.getTransaction().isActive()) em.getTransaction().rollback();
 			em.close();
@@ -68,11 +68,11 @@ public class AuctionService {
 			em.persist(tmp);
 			em.getTransaction().commit();
 		} catch(ValidationException e) {
-			throw new ClientErrorException(409);
+			throw new ClientErrorException(e.getMessage(), 409);
 		} catch(RollbackException e) {
-			throw new ClientErrorException(409);
+			throw new ClientErrorException(e.getMessage(), 409);
 		} catch(Exception e) {
-			throw e;
+			throw new ClientErrorException(e.getMessage(), 500);
 		} finally{
 	        if(em.getTransaction().isActive()){
 	            System.out.println("Entity Manager Rollback");
@@ -107,13 +107,13 @@ public class AuctionService {
 			}
 			em.getTransaction().commit();
 		} catch(ValidationException e) {
-			throw new ClientErrorException(409);
+			throw new ClientErrorException(e.getMessage(), 409);
 		} catch(RollbackException e) {
-			throw new ClientErrorException(409);
+			throw new ClientErrorException(e.getMessage(), 409);
 		} catch(NoResultException e){
-			throw new ClientErrorException(404);
+			throw new ClientErrorException(e.getMessage(), 404);
 		} catch(Exception e) {
-			throw e;
+			throw new ClientErrorException(e.getMessage(), 500);
 		} finally{
 	        if(em.getTransaction().isActive()){
 	            System.out.println("Entity Manager Rollback");
@@ -141,9 +141,9 @@ public class AuctionService {
 					.setParameter("id", id);
 			l =  query.getResultList();
 		} catch(NoResultException e){
-			throw new ClientErrorException(404);
+			throw new ClientErrorException(e.getMessage(), 404);
 		} catch(Exception e) {
-			throw e;
+			throw new ClientErrorException(e.getMessage(), 500);
 		} finally{
 			if(em.getTransaction().isActive()) em.getTransaction().rollback();
 			em.close();
