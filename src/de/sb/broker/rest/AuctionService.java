@@ -8,7 +8,10 @@ import javax.persistence.EntityManagerFactory;
 import javax.persistence.NoResultException;
 import javax.persistence.Persistence;
 import javax.persistence.TypedQuery;
+import javax.validation.Valid;
+import javax.validation.constraints.NotNull;
 import javax.ws.rs.GET;
+import javax.ws.rs.HeaderParam;
 import javax.ws.rs.PUT;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
@@ -32,9 +35,13 @@ public class AuctionService {
 	 */
 	@GET
 	@Produces({MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML})
-	public List<Auction> getAuctions(){
+	@Auction.XmlSellerAsEntityFilter
+	public List<Auction> getAuctions(
+			@NotNull @HeaderParam ("Authorization") String authentication
+	){
 		final EntityManager em = emf.createEntityManager();
 		List<Auction> l;
+		LifeCycleProvider.authenticate(authentication);
 		try{			
 			TypedQuery<Auction> query = em.createQuery("SELECT a FROM Auction a", Auction.class);
 			l =  query.getResultList();
@@ -54,24 +61,41 @@ public class AuctionService {
 	 */
 	@PUT
 	@Produces(MediaType.APPLICATION_XML)
-	public void setAuction(Auction a){
+	public void setAuction(
+			@NotNull @HeaderParam ("Authorization") String authentication,
+			@Valid @NotNull Auction template
+	){
 		final EntityManager em = emf.createEntityManager();
 		try{
-			if(a.getIdentity() == 0){ // creates new auction
+			if(template.getIdentity() == 0){ // creates new auction
 				em.getTransaction().begin();
-				em.persist(a);
+				em.persist(template);
 				em.getTransaction().commit();
 			}else{
 				em.getTransaction().begin();
-				Auction toUpdate = em.find(Auction.class, a.getIdentity());
+				Auction toUpdate = em.find(Auction.class, template.getIdentity());
 				if(!toUpdate.isClosed() && toUpdate.getBids().size() <= 0){ // update auction
-					if(a.getAskingPrice() != 0) toUpdate.setAskingPrice(a.getAskingPrice());
-					if(a.getClosureTimestamp() != 0) toUpdate.setClosureTimestamp(a.getClosureTimestamp());
-					if(a.getDescription() != null) toUpdate.setDescription(a.getDescription());
-					if(a.getSeller() != null) toUpdate.setSeller(a.getSeller());
-					if(a.getTitle() != null) toUpdate.setTitle(a.getTitle());
-					if(a.getUnitCount() != 0)toUpdate.setUnitCount(a.getUnitCount());
-					if(a.getVersion() != 0)toUpdate.setVersion(a.getVersion());
+					if(template.getAskingPrice() != 0) {
+						toUpdate.setAskingPrice(template.getAskingPrice());
+					}
+					if(template.getClosureTimestamp() != 0) {
+						toUpdate.setClosureTimestamp(template.getClosureTimestamp());
+					}
+					if(template.getDescription() != null) {
+						toUpdate.setDescription(template.getDescription());
+					}
+					if(template.getSeller() != null) {
+						toUpdate.setSeller(template.getSeller());
+					}
+					if(template.getTitle() != null) {
+						toUpdate.setTitle(template.getTitle());
+					}
+					if(template.getUnitCount() != 0) {
+						toUpdate.setUnitCount(template.getUnitCount());
+					}
+					if(template.getVersion() != 0) {
+						toUpdate.setVersion(template.getVersion());
+					}
 				}
 				em.getTransaction().commit();
 			}
@@ -93,7 +117,11 @@ public class AuctionService {
 	@GET
 	@Path("{identity}")
 	@Produces(MediaType.APPLICATION_XML)
-	public List<Auction> getAuctionIdentityXML(@PathParam("identity") final long id){
+	@Auction.XmlSellerAsReferenceFilter
+	public List<Auction> getAuctionIdentityXML(
+			@NotNull @HeaderParam ("Authorization") String authentication, 
+			@PathParam("identity") final long id
+	){
 		final EntityManager em = emf.createEntityManager();
 		List<Auction> l;
 		try{			

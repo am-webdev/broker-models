@@ -11,6 +11,7 @@ import javax.persistence.EntityManager;
 import javax.persistence.EntityManagerFactory;
 import javax.persistence.Persistence;
 import javax.persistence.PersistenceException;
+import javax.persistence.TypedQuery;
 import javax.ws.rs.ClientErrorException;
 import javax.ws.rs.NotAuthorizedException;
 import javax.ws.rs.WebApplicationException;
@@ -55,7 +56,8 @@ public class LifeCycleProvider implements ContainerRequestFilter, ContainerRespo
 	static private volatile EntityManagerFactory BROKER_FACTORY;
 	static private final ThreadLocal<EntityManager> BROKER_THREAD_LOCAL = new ThreadLocal<>();
 	static private final Object MONITOR = new Object();
-	static private final String PERSON_BY_ALIAS = "select p from Person as p where p.alias = :alias";
+	static private final String PERSON_BY_ALIAS = "SELECT p.identity FROM Person AS p WHERE "
+			+ "p.alias = :alias AND p.passwordHash = :passwordHash";
 
 
 	/**
@@ -121,7 +123,19 @@ public class LifeCycleProvider implements ContainerRequestFilter, ContainerRespo
 		// If there is none, or if it fails the password hash check, then throw NotAuthorizedException("Basic"). Note
 		// that this exception type is a specialized Subclass of ClientErrorException that is capable of storing a
 		// challenge, in this case for Basic Authorization. 
-		throw new AssertionError(PERSON_BY_ALIAS);
+		
+		final byte[] passwordHash = Person.passwordHash(password);
+		
+		final EntityManager em = brokerFactory().createEntityManager();
+		TypedQuery<Person> query = em.createQuery(PERSON_BY_ALIAS, Person.class);
+		query.setParameter("alias", username);
+		query.setParameter("passwordHash", passwordHash);
+		Person user = em.find(Person.class, query.getSingleResult());
+		if (user == null) 
+			throw new NotAuthorizedException("Basic");
+		return user;
+		
+		//throw new AssertionError(PERSON_BY_ALIAS);
 	}
 
 
@@ -150,7 +164,9 @@ public class LifeCycleProvider implements ContainerRequestFilter, ContainerRespo
 			? ((WebApplicationException) exception).getResponse()
 			: Response.status(INTERNAL_SERVER_ERROR).build();
 
-		Logger.getGlobal().log(logLevel(response.getStatusInfo()), exception.getMessage(), exception);
+		if (response.getStatus() >= INTERNAL_SERVER_ERROR.getStatusCode()) {
+			Logger.getGlobal().log(logLevel(response.getStatusInfo()), exception.getMessage(), exception);
+		}
 		return response;
 	}
 
