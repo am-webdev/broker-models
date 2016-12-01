@@ -14,6 +14,7 @@ import javax.ws.rs.PUT;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
+import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 
 import de.sb.broker.model.Auction;
@@ -33,11 +34,16 @@ public class AuctionService {
 	 */
 	@GET
 	@Produces({MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML})
-	public List<Auction> getAuctions(){
+	public List<Auction> getAuctions(@QueryParam("closed") final boolean isClosed){
 		final EntityManager em = emf.createEntityManager();
 		List<Auction> l;
-		try{			
-			TypedQuery<Auction> query = em.createQuery("SELECT a FROM Auction a", Auction.class);
+		try{
+			String queryString = "SELECT a FROM Auction a";
+			if (isClosed) {
+				queryString += " WHERE a.closureTimestamp < "+ System.currentTimeMillis();
+				// Can we do something like: queryString = "SELECT a FROM Auction a WHERE a.isClosed = true";
+			} 
+			TypedQuery<Auction> query = em.createQuery(queryString, Auction.class);
 			l =  query.getResultList();
 		}catch(NoResultException e){
 			l = new ArrayList<Auction>();

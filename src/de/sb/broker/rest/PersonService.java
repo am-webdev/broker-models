@@ -25,6 +25,7 @@ import javax.ws.rs.PUT;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
+import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.ResponseBuilder;
@@ -94,11 +95,25 @@ public class PersonService {
 	@GET
 	@Path("{identity}/auctions")
 	@Produces({MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML})
-	public List<Auction> getPeopleIdentityAuctions(@PathParam("identity") final long id){
+	public List<Auction> getPeopleIdentityAuctions(
+			@PathParam("identity") final long id,
+			@QueryParam("closed") final boolean isClosed,
+			@QueryParam("seller") final boolean isSeller ) {
 		final EntityManager em = emf.createEntityManager();
 		List<Auction> l;
 		try{
-			TypedQuery<Auction> query = em.createQuery("SELECT a FROM Auction a LEFT JOIN a.bids b WHERE a.seller.identity = :id OR b.bidder.identity = :id", Auction.class)
+			/*
+			 * TODO REFACTORING?  Using criteria queries should reduce the complexity/trivial if clauses
+			 */
+			String queryString = "SELECT a FROM Auction a LEFT JOIN a.bids b WHERE a.seller.identity = :id OR b.bidder.identity = :id";
+			if (isSeller) {
+				queryString = "SELECT a FROM Auction a LEFT JOIN a.bids b WHERE a.seller.identity = :id";
+			}
+			if (isClosed) {
+				queryString += " AND a.closureTimestamp < "+ System.currentTimeMillis();
+				// Can we do something like: queryString = "SELECT a FROM Auction a WHERE a.isClosed = true";
+			}
+			TypedQuery<Auction> query = em.createQuery(queryString, Auction.class)
 					.setParameter("id", id);
 			l = query.getResultList();
 		}catch(NoResultException e){
