@@ -12,6 +12,7 @@ import javax.validation.Valid;
 import javax.validation.constraints.NotNull;
 import javax.ws.rs.GET;
 import javax.ws.rs.HeaderParam;
+import javax.ws.rs.POST;
 import javax.ws.rs.PUT;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
@@ -173,5 +174,48 @@ public class AuctionService {
 			em.close();
 		}
 		return b;
+	}
+	
+	/**
+	 * Creates or modifies the requester's bid for the given auction, depending on the requester and the price (in cent) within the
+	 * given request body. If the price is zero, then the requester's bid is removed instead.
+	 * @param id
+	 * @return Bid
+	 */
+	@POST
+	@Path("{identity}/bid")
+	@Produces(MediaType.APPLICATION_XML)
+	public void setRequestersBid(
+			@NotNull @HeaderParam ("Authorization") String authentication, 
+			@PathParam("identity") final long id,
+			@Valid final long price
+	){
+		final EntityManager em = emf.createEntityManager();
+		Person requester = LifeCycleProvider.authenticate(authentication);
+		Bid b;
+		try{			
+			TypedQuery<Bid> query = em
+					.createQuery("SELECT a FROM Auction a RIGHT JOIN a.bids b WHERE a.seller.identity = :id AND b.bidder.identity = ", Bid.class)
+					.setParameter("id", id)
+					.setParameter("pid", requester.getIdentity());
+			b =  query.getSingleResult();
+			em.getTransaction().begin();
+			if(price == 0) {
+				em.remove(b);
+			} else {
+				b.setPrice(price);
+			}
+			em.getTransaction().commit();
+		}catch(NoResultException e){
+			em.getTransaction().begin();
+			Auction a = em.find(Auction.class, id);
+			b = new Bid(a, requester);
+			b.setPrice(price);
+			em.persist(b);
+			em.getTransaction().commit();
+		} finally {
+			if(em.getTransaction().isActive()) em.getTransaction().rollback();
+			em.close();
+		}
 	}
 }
