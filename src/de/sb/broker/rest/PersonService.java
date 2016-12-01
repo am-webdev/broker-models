@@ -15,6 +15,7 @@ import javax.persistence.EntityManagerFactory;
 import javax.persistence.NoResultException;
 import javax.persistence.Persistence;
 import javax.persistence.TypedQuery;
+import javax.validation.constraints.NotNull;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.GET;
 import javax.ws.rs.HeaderParam;
@@ -30,6 +31,7 @@ import de.sb.broker.model.Auction;
 import de.sb.broker.model.Bid;
 import de.sb.broker.model.Document;
 import de.sb.broker.model.Person;
+import de.sb.broker.model.Person.Group;
 
 @Path("people")
 public class PersonService {
@@ -55,21 +57,29 @@ public class PersonService {
 	
 	@PUT
 	@Consumes(MediaType.APPLICATION_JSON)
-	public void setPerson(Person p, @HeaderParam("Set-password") final String pw){
+	public void setPerson(
+			@NotNull @HeaderParam ("Authorization") String authentication, 
+			Person p, @HeaderParam("Set-password") final String pw){
 		final EntityManager em = emf.createEntityManager();
-		try{
-			em.getTransaction().begin();
-			
-			p.setPasswordHash(Person.passwordHash(pw));
-			Document d = new Document("application/image-png", new byte[]{0,0,1,0}, new byte[]{0,0,1,0});
-			p.setAvatar(d);
-			em.find(Person.class, p.getIdentity());
-			em.merge(p);
-			em.merge(d);
-			em.getTransaction().commit();
-		}finally{
-			if(em.getTransaction().isActive()) em.getTransaction().rollback();
-			em.close();
+		Person requester = LifeCycleProvider.authenticate(authentication);
+		if(p.getGroup() != Group.ADMIN || (p.getGroup() == Group.ADMIN && requester.getGroup() == Group.ADMIN)) {
+			try{
+				
+				em.getTransaction().begin();
+				
+				p.setPasswordHash(Person.passwordHash(pw));
+				Document d = new Document("application/image-png", new byte[]{0,0,1,0}, new byte[]{0,0,1,0});
+				p.setAvatar(d);
+				em.find(Person.class, p.getIdentity());
+				em.merge(p);
+				em.merge(d);
+				em.getTransaction().commit();
+			}finally{
+				if(em.getTransaction().isActive()) em.getTransaction().rollback();
+				em.close();
+			}
+		} else {
+			//TODO throw not authorized to set Group to ADMIN if requester not ADMIN
 		}
 	}
 	
@@ -116,15 +126,24 @@ public class PersonService {
 	@GET
 	@Path("{identity}/bids")
 	@Produces({MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML})
-	public List<Bid> getPeopleIdentityBids(@PathParam("identity") final long id){
+	public List<Bid> getPeopleIdentityBids(
+			@NotNull @HeaderParam ("Authorization") String authentication, 
+			@PathParam("identity") final long id){
 		final EntityManager em = emf.createEntityManager();
+		Person requester = LifeCycleProvider.authenticate(authentication);
 		//TODO -> join with auctions, check closureTimeStamp
 		List<Bid> l = new ArrayList<Bid>();
 		try{
-			long ts = System.currentTimeMillis();
-			TypedQuery<Bid> query = em.createQuery("SELECT b FROM Bid b JOIN b.auction a WHERE a.closureTimestamp < :ts AND b.bidder.identity = :id", Bid.class)
-					.setParameter("id", id)
-					.setParameter("ts", ts);
+			TypedQuery<Bid> query;
+			if(id == requester.getIdentity()) {
+				query = em.createQuery("SELECT b FROM Bid b JOIN b.auction a WHERE b.bidder.identity = :id", Bid.class)
+						.setParameter("id", id);
+			} else {
+				long ts = System.currentTimeMillis();
+				query = em.createQuery("SELECT b FROM Bid b JOIN b.auction a WHERE a.closureTimestamp < :ts AND b.bidder.identity = :id", Bid.class)
+						.setParameter("id", id)
+						.setParameter("ts", ts);
+			}
 			l =  query.getResultList();
 		}catch(NoResultException e){
 			l = new ArrayList<Bid>();
