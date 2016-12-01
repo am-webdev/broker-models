@@ -11,6 +11,7 @@ import javax.persistence.RollbackException;
 import javax.persistence.TypedQuery;
 import javax.validation.Valid;
 import javax.validation.ValidationException;
+import javax.validation.constraints.NotNull;
 import javax.ws.rs.ClientErrorException;
 import javax.ws.rs.GET;
 import javax.ws.rs.PUT;
@@ -91,7 +92,7 @@ public class AuctionService {
 	@PUT
 	@Path("{identity}")
 	@Produces(MediaType.APPLICATION_XML)
-	public void updateAuction(@Valid Auction tmp, @PathParam("identity") final Long identity){
+	public void updateAuction(@Valid Auction tmp, @PathParam("identity") @NotNull final Long identity){
 		final EntityManager em = emf.createEntityManager();
 		try{
 			em.getTransaction().begin();
@@ -132,7 +133,7 @@ public class AuctionService {
 	@GET
 	@Path("{identity}")
 	@Produces(MediaType.APPLICATION_XML)
-	public List<Auction> getAuctionIdentityXML(@PathParam("identity") final long id){
+	public List<Auction> getAuctionIdentityXML(@PathParam("identity") @NotNull final long id){
 		final EntityManager em = emf.createEntityManager();
 		List<Auction> l;
 		try{			
