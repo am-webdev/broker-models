@@ -84,6 +84,14 @@ public class PersonService {
 	}
 	
 	@GET
+	@Path("/requester")
+	@Produces({MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML})
+	public Person getRequester(
+			@NotNull @HeaderParam ("Authorization") String authentication){
+		return LifeCycleProvider.authenticate(authentication);
+	}
+	
+	@GET
 	@Path("{identity}")
 	@Produces({MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML})
 	public Person getPeopleIdentity(@PathParam("identity") final long id){
