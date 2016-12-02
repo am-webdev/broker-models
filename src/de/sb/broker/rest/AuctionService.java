@@ -64,62 +64,6 @@ public class AuctionService {
 		}
 		return l;
 	}
-	
-	/**
-	 * Creates or modifies an auction from the given template data. Note
-	 * that an auction may only be modified as long as it is not sealed (i.e. is open and still
-	 * without bids).
-	 */
-	/*
-	@PUT
-	@Produces(MediaType.APPLICATION_XML)
-<<<<<<< HEAD
-	public void setAuction(
-			@NotNull @HeaderParam ("Authorization") String authentication,
-			@Valid @NotNull Auction template
-	){
-		final EntityManager em = emf.createEntityManager();
-
-		Person requester = LifeCycleProvider.authenticate(authentication);
-		try{
-			if(template.getIdentity() == 0){ // creates new auction
-				template.setSeller(requester);
-				em.getTransaction().begin();
-				em.persist(template);
-				em.getTransaction().commit();
-			}else{
-				em.getTransaction().begin();
-				Auction toUpdate = em.find(Auction.class, template.getIdentity());
-				if(toUpdate.getSeller() == requester) {
-					if(!toUpdate.isClosed() && toUpdate.getBids().size() <= 0){ // update auction
-						if(template.getAskingPrice() != 0) {
-							toUpdate.setAskingPrice(template.getAskingPrice());
-						}
-						if(template.getClosureTimestamp() != 0) {
-							toUpdate.setClosureTimestamp(template.getClosureTimestamp());
-						}
-						if(template.getDescription() != null) {
-							toUpdate.setDescription(template.getDescription());
-						}
-						if(template.getSeller() != null) {
-							toUpdate.setSeller(template.getSeller());
-						}
-						if(template.getTitle() != null) {
-							toUpdate.setTitle(template.getTitle());
-						}
-						if(template.getUnitCount() != 0) {
-							toUpdate.setUnitCount(template.getUnitCount());
-						}
-						if(template.getVersion() != 0) {
-							toUpdate.setVersion(template.getVersion());
-						}
-					} else {
-						// TODO throw ClientErrorException(403)
-					}
-				}
-				em.getTransaction().commit();
-			}
-	*/
 
 	public void createAuction(
 		@NotNull @HeaderParam ("Authorization") String authentication

@@ -219,7 +219,6 @@ public class PersonService {
             // p.setAvatar(new Document("application/image-png", new byte[]{}, new byte[]{}));
             em.persist(tmp);
             em.getTransaction().commit();
-        } finally {
         } catch(NoResultException e){
 			throw new ClientErrorException(e.getMessage(), 404);
 		} catch(TransactionalException e) {
@@ -292,7 +291,7 @@ public class PersonService {
 			CriteriaBuilder cb = em.getCriteriaBuilder();
 			CriteriaQuery<Person> q = cb.createQuery(Person.class);
 			Root<Person> rootPerson = q.from(Person.class);
-			q.where(cb.equal(rootPerson.get("identity"), personIdentity));
+			q.where(cb.equal(rootPerson.get("identity"), personIdentity));			
 			d = em.createQuery(q).getSingleResult().getAvatar();
 		} catch(NoResultException e){
 			throw new ClientErrorException(e.getMessage(), 404);
