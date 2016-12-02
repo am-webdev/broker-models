@@ -14,9 +14,11 @@ import javax.persistence.EntityManagerFactory;
 import javax.persistence.NoResultException;
 import javax.persistence.Persistence;
 import javax.persistence.TypedQuery;
+import javax.validation.constraints.NotNull;
 import javax.persistence.criteria.CriteriaBuilder;
 import javax.persistence.criteria.CriteriaQuery;
 import javax.persistence.criteria.Root;
+import javax.validation.Valid;
 import javax.transaction.TransactionalException;
 import javax.validation.Valid;
 import javax.validation.constraints.NotNull;
@@ -28,7 +30,6 @@ import javax.ws.rs.PUT;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
-import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.ResponseBuilder;
@@ -37,6 +38,7 @@ import de.sb.broker.model.Auction;
 import de.sb.broker.model.Bid;
 import de.sb.broker.model.Document;
 import de.sb.broker.model.Person;
+import de.sb.broker.model.Person.Group;
 
 @Path("people")
 public class PersonService {
@@ -49,9 +51,9 @@ public class PersonService {
 	@Produces({MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML})
 	public List<Person> getPeople() {
 		final EntityManager em = LifeCycleProvider.brokerManager();
-		em.getTransaction().begin();
 		List<Person> l;
 		try{
+			em.getTransaction().begin();
 			TypedQuery<Person> q = em.createQuery("SELECT p FROM Person p", Person.class);
 			l =  q.getResultList();
 		} catch(NoResultException e){
@@ -63,6 +65,19 @@ public class PersonService {
 			em.getTransaction().begin();
 		}
 		return l;
+	}
+	
+	/**
+	 * Returns the person matching the given identity.
+	 * @param id
+	 * @return
+	 */
+	@GET
+	@Path("/requester")
+	@Produces({MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML})
+	public Person getRequester(
+			@NotNull @HeaderParam ("Authorization") String authentication){
+		return LifeCycleProvider.authenticate(authentication);
 	}
 	
 	/**
@@ -144,15 +159,24 @@ public class PersonService {
 	@GET
 	@Path("{identity}/bids")
 	@Produces({MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML})
-	public List<Bid> getPeopleIdentityBids(@PathParam("identity") final long id){
+	public List<Bid> getPeopleIdentityBids(
+					@NotNull @HeaderParam ("Authorization") String authentication, 
+					@PathParam("identity") final long id){
 		final EntityManager em = LifeCycleProvider.brokerManager();
+		Person requester = LifeCycleProvider.authenticate(authentication);
 		List<Bid> l = new ArrayList<Bid>();
 		try{
 			em.getTransaction().begin();
-			long ts = System.currentTimeMillis();
-			TypedQuery<Bid> query = em.createQuery("SELECT b FROM Bid b JOIN b.auction a WHERE a.closureTimestamp < :ts AND b.bidder.identity = :id", Bid.class)
-					.setParameter("id", id)
-					.setParameter("ts", ts);
+			TypedQuery<Bid> query;
+			if(id == requester.getIdentity()) {
+				query = em.createQuery("SELECT b FROM Bid b JOIN b.auction a WHERE b.bidder.identity = :id", Bid.class)
+						.setParameter("id", id);
+			} else {
+				long ts = System.currentTimeMillis();
+				query = em.createQuery("SELECT b FROM Bid b JOIN b.auction a WHERE a.closureTimestamp < :ts AND b.bidder.identity = :id", Bid.class)
+						.setParameter("id", id)
+						.setParameter("ts", ts);
+			}
 			l =  query.getResultList();
 		} catch(NoResultException e){
 			throw new ClientErrorException(e.getMessage(), 404);
@@ -256,7 +280,7 @@ public class PersonService {
 	@GET
 	@Path("{identity}/avatar")
 	@Produces(MediaType.WILDCARD)
-	public Response getAvatar(@PathParam("identity") @NotNull final Long personIdentity) throws Exception {
+	public Response getAvatar(@PathParam("identity") final long personIdentity) throws Exception {
 		// Select from Database
 		final EntityManager em = LifeCycleProvider.brokerManager();
 		Document d = null;
@@ -267,10 +291,8 @@ public class PersonService {
 			CriteriaBuilder cb = em.getCriteriaBuilder();
 			CriteriaQuery<Person> q = cb.createQuery(Person.class);
 			Root<Person> rootPerson = q.from(Person.class);
-			q.where(cb.equal(rootPerson.get("identity"), personIdentity));
-			
+			q.where(cb.equal(rootPerson.get("identity"), personIdentity));			
 			d = em.createQuery(q).getSingleResult().getAvatar();
-			
 		} catch(NoResultException e){
 			throw new ClientErrorException(e.getMessage(), 404);
 		} catch(Exception e) {
