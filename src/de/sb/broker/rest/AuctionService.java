@@ -23,8 +23,6 @@ import de.sb.broker.model.Person;
 
 @Path("auctions")
 public class AuctionService {
-
-	private static final LifeCycleProvider lifeCycleProvider = new LifeCycleProvider();
 	
 	/**
 	 * Returns the auctions matching the given criteria, with null or missing
@@ -34,7 +32,7 @@ public class AuctionService {
 	@GET
 	@Produces({MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML})
 	public List<Auction> getAuctions(){
-		final EntityManager em = lifeCycleProvider.brokerManager();
+		final EntityManager em = LifeCycleProvider.brokerManager();
 		List<Auction> l;
 		try{			
 			em.getTransaction().begin();
@@ -57,7 +55,7 @@ public class AuctionService {
 	@PUT
 	@Produces(MediaType.APPLICATION_XML)
 	public void createAuction(@Valid Auction tmp){
-		final EntityManager em = lifeCycleProvider.brokerManager();
+		final EntityManager em = LifeCycleProvider.brokerManager();
 		try{
 			em.getTransaction().begin();
 			em.persist(tmp);
@@ -82,7 +80,7 @@ public class AuctionService {
 	@Path("{identity}")
 	@Produces(MediaType.APPLICATION_XML)
 	public void updateAuction(@Valid Auction tmp, @PathParam("identity") final Long identity){
-		final EntityManager em = lifeCycleProvider.brokerManager();
+		final EntityManager em = LifeCycleProvider.brokerManager();
 		try{
 			em.getTransaction().begin();
 			Auction a = em.find(Auction.class, identity);
@@ -116,7 +114,7 @@ public class AuctionService {
 	@Path("{identity}")
 	@Produces(MediaType.APPLICATION_XML)
 	public List<Auction> getAuctionIdentityXML(@PathParam("identity") final long id){
-		final EntityManager em = lifeCycleProvider.brokerManager();
+		final EntityManager em = LifeCycleProvider.brokerManager();
 		List<Auction> l;
 		try{
 			em.getTransaction().begin();

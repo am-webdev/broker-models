@@ -36,9 +36,6 @@ import de.sb.broker.model.Person;
 
 @Path("people")
 public class PersonService {
-
-	private static final LifeCycleProvider lifeCycleProvider = new LifeCycleProvider();
-	private Cache cache = null;
 	
 	/**
 	 * Returns the people matching the given criteria, with null or missing parameters identifying omitted criteria.
@@ -47,7 +44,7 @@ public class PersonService {
 	@GET
 	@Produces({MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML})
 	public List<Person> getPeople() {
-		final EntityManager em = lifeCycleProvider.brokerManager();
+		final EntityManager em = LifeCycleProvider.brokerManager();
 		em.getTransaction().begin();
 		List<Person> l;
 		try{
@@ -71,7 +68,7 @@ public class PersonService {
 	@Path("{identity}")
 	@Produces({MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML})
 	public Person getPeopleIdentity(@PathParam("identity") final long id){
-		final EntityManager em = lifeCycleProvider.brokerManager();
+		final EntityManager em = LifeCycleProvider.brokerManager();
 		Person p;
 		try{
 			em.getTransaction().begin();
@@ -97,7 +94,7 @@ public class PersonService {
 	@Path("{identity}/auctions")
 	@Produces({MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML})
 	public List<Auction> getPeopleIdentityAuctions(@PathParam("identity") final long id){
-		final EntityManager em = lifeCycleProvider.brokerManager();
+		final EntityManager em = LifeCycleProvider.brokerManager();
 		List<Auction> l;
 		try{
 			em.getTransaction().begin();
@@ -122,7 +119,7 @@ public class PersonService {
 	@Path("{identity}/bids")
 	@Produces({MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML})
 	public List<Bid> getPeopleIdentityBids(@PathParam("identity") final long id){
-		final EntityManager em = lifeCycleProvider.brokerManager();
+		final EntityManager em = LifeCycleProvider.brokerManager();
 		List<Bid> l = new ArrayList<Bid>();
 		try{
 			em.getTransaction().begin();
@@ -151,7 +148,7 @@ public class PersonService {
     @PUT
     @Consumes(MediaType.APPLICATION_JSON)
     public void createPerson(@Valid Person tmp, @HeaderParam("Set-password") final String pw){
-		final EntityManager em = lifeCycleProvider.brokerManager();
+		final EntityManager em = LifeCycleProvider.brokerManager();
         System.out.println(tmp);
         try{
             em.getTransaction().begin();
@@ -190,7 +187,7 @@ public class PersonService {
     public void updatePerson(@Valid Person tmp,
     		@HeaderParam("Set-password") final String pw,
     		@PathParam("identity") final Long personIdentity) {
-		final EntityManager em = lifeCycleProvider.brokerManager();
+		final EntityManager em = LifeCycleProvider.brokerManager();
         try{
     		em.getTransaction().begin();
     		Person p = em.find(Person.class, personIdentity);
@@ -218,7 +215,7 @@ public class PersonService {
 	@Produces(MediaType.WILDCARD)
 	public Response getAvatar(@PathParam("identity") final Long personIdentity) throws Exception {
 		// Select from Database
-		final EntityManager em = lifeCycleProvider.brokerManager();
+		final EntityManager em = LifeCycleProvider.brokerManager();
 		Document d = null;
 		Person p = null;
 		try{
@@ -250,7 +247,7 @@ public class PersonService {
 			byte[] fileBytes) throws Exception  {
 		
 		// Entitiy Manager used several times, but closed after each transition
-		final EntityManager em = lifeCycleProvider.brokerManager();
+		final EntityManager em = LifeCycleProvider.brokerManager();
     	Document uploadedDocument = null;
 		
 		/*
