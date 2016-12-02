@@ -17,7 +17,10 @@ import javax.persistence.TypedQuery;
 import javax.persistence.criteria.CriteriaBuilder;
 import javax.persistence.criteria.CriteriaQuery;
 import javax.persistence.criteria.Root;
+import javax.transaction.TransactionalException;
 import javax.validation.Valid;
+import javax.validation.constraints.NotNull;
+import javax.ws.rs.ClientErrorException;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.GET;
 import javax.ws.rs.HeaderParam;
@@ -50,9 +53,11 @@ public class PersonService {
 		try{
 			TypedQuery<Person> q = em.createQuery("SELECT p FROM Person p", Person.class);
 			l =  q.getResultList();
-		}catch(NoResultException e){
-			l = new ArrayList<Person>();
-		}finally{
+		} catch(NoResultException e){
+			throw new ClientErrorException(e.getMessage(), 404);
+		} catch(Exception e) {
+			throw new ClientErrorException(e.getMessage(), 500);
+		} finally{
 			if(em.getTransaction().isActive()) em.getTransaction().rollback();
 			em.getTransaction().begin();
 		}
@@ -76,9 +81,11 @@ public class PersonService {
 					.createQuery("SELECT p FROM Person p WHERE p.identity = :id", Person.class)
 					.setParameter("id", id);
 			p = query.getSingleResult();
-		}catch(NoResultException e){
-			p = new Person();
-		}finally{
+		} catch(NoResultException e){
+			throw new ClientErrorException(e.getMessage(), 404);
+		} catch(Exception e) {
+			throw new ClientErrorException(e.getMessage(), 500);
+		} finally{
 			if(em.getTransaction().isActive()) em.getTransaction().rollback();
 			em.getTransaction().begin();
 		}
@@ -101,9 +108,13 @@ public class PersonService {
 			TypedQuery<Auction> query = em.createQuery("SELECT a FROM Auction a LEFT JOIN a.bids b WHERE a.seller.identity = :id OR b.bidder.identity = :id", Auction.class)
 					.setParameter("id", id);
 			l = query.getResultList();
-		}catch(NoResultException e){
-			l = new ArrayList<Auction>();
-		}finally{
+		} catch(NoResultException e){
+			throw new ClientErrorException(e.getMessage(), 404);
+		} catch(TransactionalException e) {
+			throw new ClientErrorException(e.getMessage(), 409);
+		} catch(Exception e) {
+			throw new ClientErrorException(e.getMessage(), 500);
+		} finally{
 			if(em.getTransaction().isActive()) em.getTransaction().rollback();
 			em.getTransaction().begin();
 		}
@@ -128,9 +139,13 @@ public class PersonService {
 					.setParameter("id", id)
 					.setParameter("ts", ts);
 			l =  query.getResultList();
-		}catch(NoResultException e){
-			l = new ArrayList<Bid>();
-		}finally{
+		} catch(NoResultException e){
+			throw new ClientErrorException(e.getMessage(), 404);
+		} catch(TransactionalException e) {
+			throw new ClientErrorException(e.getMessage(), 409);
+		} catch(Exception e) {
+			throw new ClientErrorException(e.getMessage(), 500);
+		} finally{
 			if(em.getTransaction().isActive()) em.getTransaction().rollback();
 			em.getTransaction().begin();
 		}
@@ -152,7 +167,10 @@ public class PersonService {
         System.out.println(tmp);
         try{
             em.getTransaction().begin();
-            
+            /* 	TODO REFACTORING recommended
+             *  we should refactor this to NOT send the plain text via HTTP(S)
+             *  instead the HASH should be transmitted and saved directly to the BD
+             */
             // set password hash
             // example hash 2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824
             // meaning hello
@@ -162,8 +180,13 @@ public class PersonService {
             // p.setAvatar(new Document("application/image-png", new byte[]{}, new byte[]{}));
             em.persist(tmp);
             em.getTransaction().commit();
-    		em.getTransaction().begin();
-        }finally{
+        } catch(NoResultException e){
+			throw new ClientErrorException(e.getMessage(), 404);
+		} catch(TransactionalException e) {
+			throw new ClientErrorException(e.getMessage(), 409);
+		} catch(Exception e) {
+			throw new ClientErrorException(e.getMessage(), 500);
+		} finally{
             if(em.getTransaction().isActive()){
                 System.out.println("Entity Manager Rollback");
                 em.getTransaction().rollback();
@@ -198,8 +221,13 @@ public class PersonService {
     		if(tmp.getContact() != null) p.setContact(tmp.getContact());
     		if(pw != "") p.setPasswordHash(Person.passwordHash(pw));
     		em.getTransaction().commit();
-    		em.getTransaction().begin();
-        }finally{
+        } catch(NoResultException e){
+			throw new ClientErrorException(e.getMessage(), 404);
+		} catch(TransactionalException e) {
+			throw new ClientErrorException(e.getMessage(), 409);
+		} catch(Exception e) {
+			throw new ClientErrorException(e.getMessage(), 500);
+		} finally{
             if(em.getTransaction().isActive()){
                 System.out.println("Entity Manager Rollback");
                 em.getTransaction().rollback();
@@ -213,7 +241,7 @@ public class PersonService {
 	@GET
 	@Path("{identity}/avatar")
 	@Produces(MediaType.WILDCARD)
-	public Response getAvatar(@PathParam("identity") final Long personIdentity) throws Exception {
+	public Response getAvatar(@PathParam("identity") @NotNull final Long personIdentity) throws Exception {
 		// Select from Database
 		final EntityManager em = LifeCycleProvider.brokerManager();
 		Document d = null;
@@ -228,6 +256,10 @@ public class PersonService {
 			
 			d = em.createQuery(q).getSingleResult().getAvatar();
 			
+		} catch(NoResultException e){
+			throw new ClientErrorException(e.getMessage(), 404);
+		} catch(Exception e) {
+			throw new ClientErrorException(e.getMessage(), 500);
 		} finally{
 			if(em.getTransaction().isActive()) em.getTransaction().rollback();
 			em.getTransaction().begin();
@@ -257,7 +289,9 @@ public class PersonService {
 		FileOutputStream outputStream = new FileOutputStream(outputFile);
 	    try {
 	        outputStream.write(fileBytes);  //write the bytes and your done. 
-	    } finally {
+		} catch(Exception e) {
+			throw new ClientErrorException(e.getMessage(), 500);
+		} finally {
 			System.out.println("Describe content:\n\tByte-length (Origin): " + fileBytes.length +
 					"\tByte-length (Output): " + outputFile.length());
 		}
@@ -298,9 +332,13 @@ public class PersonService {
 			TypedQuery<Document> q = em.createQuery("SELECT d FROM Document d WHERE d.hash = :hash", Document.class)
 					.setParameter("hash", uploadedDocument.getHash());	// value is stored as "byte[32] --> cannot compare with String
 			l =  q.getResultList();
-		}catch(NoResultException e){
-			l = new ArrayList<Document>();
-		}finally{
+		} catch(NoResultException e){
+			throw new ClientErrorException(e.getMessage(), 404);
+		} catch(TransactionalException e) {
+			throw new ClientErrorException(e.getMessage(), 409);
+		} catch(Exception e) {
+			throw new ClientErrorException(e.getMessage(), 500);
+		} finally{
 			if(em.getTransaction().isActive()) em.getTransaction().rollback();
 			em.clear();
 			em.getTransaction().begin();
@@ -334,7 +372,13 @@ public class PersonService {
 					System.out.println("Nothing to do in here");
 				}
 			}
-		}finally{
+		} catch(NoResultException e){
+			throw new ClientErrorException(e.getMessage(), 404);
+		} catch(TransactionalException e) {
+			throw new ClientErrorException(e.getMessage(), 409);
+		} catch(Exception e) {
+			throw new ClientErrorException(e.getMessage(), 500);
+		} finally{
 	        if(em.getTransaction().isActive()){
 	            System.out.println("Entity Manager Rollback");
 	            em.getTransaction().rollback();
@@ -362,7 +406,12 @@ public class PersonService {
 			}
 			em.merge(person);
 			em.getTransaction().commit();
-			em.getTransaction().begin();
+		} catch(NoResultException e){
+			throw new ClientErrorException(e.getMessage(), 404);
+		} catch(TransactionalException e) {
+			throw new ClientErrorException(e.getMessage(), 409);
+		} catch(Exception e) {
+			throw new ClientErrorException(e.getMessage(), 500);
 		} finally {
 	        if(em.getTransaction().isActive()){
 	            System.out.println("Entity Manager Rollback");
@@ -371,6 +420,8 @@ public class PersonService {
 			em.getTransaction().begin();
 		}
 
-		return null;
+		// Simply return 201 for creating a new Resource
+		ResponseBuilder builder = Response.status(201);
+		return builder.build();
 	}
 }

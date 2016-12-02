@@ -7,8 +7,12 @@ import javax.persistence.EntityManager;
 import javax.persistence.EntityManagerFactory;
 import javax.persistence.NoResultException;
 import javax.persistence.Persistence;
+import javax.persistence.RollbackException;
 import javax.persistence.TypedQuery;
 import javax.validation.Valid;
+import javax.validation.ValidationException;
+import javax.validation.constraints.NotNull;
+import javax.ws.rs.ClientErrorException;
 import javax.ws.rs.GET;
 import javax.ws.rs.PUT;
 import javax.ws.rs.Path;
@@ -38,9 +42,12 @@ public class AuctionService {
 			em.getTransaction().begin();
 			TypedQuery<Auction> query = em.createQuery("SELECT a FROM Auction a", Auction.class);
 			l =  query.getResultList();
-		}catch(NoResultException e){
-			l = new ArrayList<Auction>();
-		}finally{
+		} catch(NoResultException e){
+			throw new ClientErrorException(e.getMessage(), 404);
+			//l = new ArrayList<Auction>();
+		} catch(Exception e) {
+			throw new ClientErrorException(e.getMessage(), 500);
+		} finally{
 			if(em.getTransaction().isActive()) em.getTransaction().rollback();
 			em.getTransaction().begin();
 		}
@@ -60,8 +67,13 @@ public class AuctionService {
 			em.getTransaction().begin();
 			em.persist(tmp);
 			em.getTransaction().commit();
-			em.getTransaction().begin();
-		}finally{
+		} catch(ValidationException e) {
+			throw new ClientErrorException(e.getMessage(), 409);
+		} catch(RollbackException e) {
+			throw new ClientErrorException(e.getMessage(), 409);
+		} catch(Exception e) {
+			throw new ClientErrorException(e.getMessage(), 500);
+		} finally{
 	        if(em.getTransaction().isActive()){
 	            System.out.println("Entity Manager Rollback");
 	            em.getTransaction().rollback();
@@ -94,8 +106,15 @@ public class AuctionService {
 				if(tmp.getVersion() != 0)a.setVersion(tmp.getVersion());
 			}
 			em.getTransaction().commit();
-			em.getTransaction().begin();
-		}finally{
+		} catch(ValidationException e) {
+			throw new ClientErrorException(e.getMessage(), 409);
+		} catch(RollbackException e) {
+			throw new ClientErrorException(e.getMessage(), 409);
+		} catch(NoResultException e){
+			throw new ClientErrorException(e.getMessage(), 404);
+		} catch(Exception e) {
+			throw new ClientErrorException(e.getMessage(), 500);
+		} finally{
 	        if(em.getTransaction().isActive()){
 	            System.out.println("Entity Manager Rollback");
 	            em.getTransaction().rollback();
@@ -122,9 +141,11 @@ public class AuctionService {
 					.createQuery("SELECT a FROM Auction a WHERE a.seller.identity = :id", Auction.class)
 					.setParameter("id", id);
 			l =  query.getResultList();
-		}catch(NoResultException e){
-			l = new ArrayList<Auction>();
-		}finally{
+		} catch(NoResultException e){
+			throw new ClientErrorException(e.getMessage(), 404);
+		} catch(Exception e) {
+			throw new ClientErrorException(e.getMessage(), 500);
+		} finally{
 			if(em.getTransaction().isActive()) em.getTransaction().rollback();
 			em.getTransaction().begin();
 		}
