@@ -38,17 +38,15 @@ import de.sb.broker.model.Person;
 @Path("people")
 public class PersonService {
 	
-	private static final EntityManagerFactory emf = Persistence.createEntityManagerFactory("broker");
-	private Cache cache = null;
-	
 	/**
 	 * Returns the people matching the given criteria, with null or missing parameters identifying omitted criteria.
 	 * @return
 	 */
 	@GET
 	@Produces({MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML})
-	public List<Person> getPeople(){
-		final EntityManager em = emf.createEntityManager();
+	public List<Person> getPeople() {
+		final EntityManager em = LifeCycleProvider.brokerManager();
+		em.getTransaction().begin();
 		List<Person> l;
 		try{
 			TypedQuery<Person> q = em.createQuery("SELECT p FROM Person p", Person.class);
@@ -57,7 +55,7 @@ public class PersonService {
 			l = new ArrayList<Person>();
 		}finally{
 			if(em.getTransaction().isActive()) em.getTransaction().rollback();
-			em.close();
+			em.getTransaction().begin();
 		}
 		return l;
 	}
@@ -71,9 +69,10 @@ public class PersonService {
 	@Path("{identity}")
 	@Produces({MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML})
 	public Person getPeopleIdentity(@PathParam("identity") final long id){
-		final EntityManager em = emf.createEntityManager();
+		final EntityManager em = LifeCycleProvider.brokerManager();
 		Person p;
 		try{
+			em.getTransaction().begin();
 			TypedQuery<Person> query = em
 					.createQuery("SELECT p FROM Person p WHERE p.identity = :id", Person.class)
 					.setParameter("id", id);
@@ -82,7 +81,7 @@ public class PersonService {
 			p = new Person();
 		}finally{
 			if(em.getTransaction().isActive()) em.getTransaction().rollback();
-			em.close();
+			em.getTransaction().begin();
 		}
 		return p;
 	}
@@ -99,9 +98,10 @@ public class PersonService {
 			@PathParam("identity") final long id,
 			@QueryParam("closed") final boolean isClosed,
 			@QueryParam("seller") final boolean isSeller ) {
-		final EntityManager em = emf.createEntityManager();
+		final EntityManager em = LifeCycleProvider.brokerManager();
 		List<Auction> l;
 		try{
+			em.getTransaction().begin();
 			/*
 			 * TODO REFACTORING?  Using criteria queries should reduce the complexity/trivial if clauses
 			 */
@@ -120,7 +120,7 @@ public class PersonService {
 			l = new ArrayList<Auction>();
 		}finally{
 			if(em.getTransaction().isActive()) em.getTransaction().rollback();
-			em.close();
+			em.getTransaction().begin();
 		}
 		return l;
 	}
@@ -134,9 +134,10 @@ public class PersonService {
 	@Path("{identity}/bids")
 	@Produces({MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML})
 	public List<Bid> getPeopleIdentityBids(@PathParam("identity") final long id){
-		final EntityManager em = emf.createEntityManager();
+		final EntityManager em = LifeCycleProvider.brokerManager();
 		List<Bid> l = new ArrayList<Bid>();
 		try{
+			em.getTransaction().begin();
 			long ts = System.currentTimeMillis();
 			TypedQuery<Bid> query = em.createQuery("SELECT b FROM Bid b JOIN b.auction a WHERE a.closureTimestamp < :ts AND b.bidder.identity = :id", Bid.class)
 					.setParameter("id", id)
@@ -146,7 +147,7 @@ public class PersonService {
 			l = new ArrayList<Bid>();
 		}finally{
 			if(em.getTransaction().isActive()) em.getTransaction().rollback();
-			em.close();
+			em.getTransaction().begin();
 		}
 		return l;
 	}
@@ -162,7 +163,7 @@ public class PersonService {
     @PUT
     @Consumes(MediaType.APPLICATION_JSON)
     public void createPerson(@Valid Person tmp, @HeaderParam("Set-password") final String pw){
-        final EntityManager em = emf.createEntityManager();
+		final EntityManager em = LifeCycleProvider.brokerManager();
         System.out.println(tmp);
         try{
             em.getTransaction().begin();
@@ -176,13 +177,14 @@ public class PersonService {
             // p.setAvatar(new Document("application/image-png", new byte[]{}, new byte[]{}));
             em.persist(tmp);
             em.getTransaction().commit();
+    		em.getTransaction().begin();
         }finally{
             if(em.getTransaction().isActive()){
                 System.out.println("Entity Manager Rollback");
                 em.getTransaction().rollback();
             }
+			em.getTransaction().begin();
             RestHelper.update2ndLevelCache(em, tmp);
-            em.close();
         }
     }
     
@@ -200,7 +202,7 @@ public class PersonService {
     public void updatePerson(@Valid Person tmp,
     		@HeaderParam("Set-password") final String pw,
     		@PathParam("identity") final Long personIdentity) {
-        final EntityManager em = emf.createEntityManager();
+		final EntityManager em = LifeCycleProvider.brokerManager();
         try{
     		em.getTransaction().begin();
     		Person p = em.find(Person.class, personIdentity);
@@ -211,13 +213,14 @@ public class PersonService {
     		if(tmp.getContact() != null) p.setContact(tmp.getContact());
     		if(pw != "") p.setPasswordHash(Person.passwordHash(pw));
     		em.getTransaction().commit();
+    		em.getTransaction().begin();
         }finally{
             if(em.getTransaction().isActive()){
                 System.out.println("Entity Manager Rollback");
                 em.getTransaction().rollback();
             }   
+			em.getTransaction().begin();
 			RestHelper.update2ndLevelCache(em, tmp);
-            em.close();
         }
     }
 	
@@ -227,10 +230,11 @@ public class PersonService {
 	@Produces(MediaType.WILDCARD)
 	public Response getAvatar(@PathParam("identity") final Long personIdentity) throws Exception {
 		// Select from Database
-		final EntityManager em = emf.createEntityManager();
+		final EntityManager em = LifeCycleProvider.brokerManager();
 		Document d = null;
 		Person p = null;
-		try{			
+		try{
+			em.getTransaction().begin();
 			// with CriteriaQuery
 			CriteriaBuilder cb = em.getCriteriaBuilder();
 			CriteriaQuery<Person> q = cb.createQuery(Person.class);
@@ -241,7 +245,7 @@ public class PersonService {
 			
 		} finally{
 			if(em.getTransaction().isActive()) em.getTransaction().rollback();
-			em.close();
+			em.getTransaction().begin();
 		}
 	     
 		ResponseBuilder builder = Response.ok(d.getContent());
@@ -258,7 +262,7 @@ public class PersonService {
 			byte[] fileBytes) throws Exception  {
 		
 		// Entitiy Manager used several times, but closed after each transition
-    	final EntityManager em = emf.createEntityManager();
+		final EntityManager em = LifeCycleProvider.brokerManager();
     	Document uploadedDocument = null;
 		
 		/*
@@ -305,6 +309,7 @@ public class PersonService {
 		 */
 		List<Document> l;
 		try{
+			em.getTransaction().begin();
 			TypedQuery<Document> q = em.createQuery("SELECT d FROM Document d WHERE d.hash = :hash", Document.class)
 					.setParameter("hash", uploadedDocument.getHash());	// value is stored as "byte[32] --> cannot compare with String
 			l =  q.getResultList();
@@ -313,6 +318,7 @@ public class PersonService {
 		}finally{
 			if(em.getTransaction().isActive()) em.getTransaction().rollback();
 			em.clear();
+			em.getTransaction().begin();
 		}
 		System.out.println("Matching entries for given hash ("+ sha256Hash +"): " + l.size());
 		
@@ -327,6 +333,7 @@ public class PersonService {
 				em.getTransaction().begin();
 				em.persist(uploadedDocument);
 				em.getTransaction().commit();
+				em.getTransaction().begin();
 				System.out.println("saved new avatar to db: " + uploadedDocument.toString());
 			} else { // Update existing avatar
 				if (uploadedDocument.getType().equals(l.get(0).getType())) {	// Check of Mime type needs to be updated
@@ -336,6 +343,7 @@ public class PersonService {
 					avatar.setType(uploadedDocument.getType());
 					// em.merge(avatar);
 					em.getTransaction().commit();
+					em.getTransaction().begin();
 					System.out.println("saved updated avatar within db: " + uploadedDocument.toString());
 				} else {
 					System.out.println("Nothing to do in here");
@@ -346,7 +354,8 @@ public class PersonService {
 	            System.out.println("Entity Manager Rollback");
 	            em.getTransaction().rollback();
 	        }
-	        em.clear();
+			em.clear();
+			em.getTransaction().begin();
 		}
 		
 
@@ -368,12 +377,13 @@ public class PersonService {
 			}
 			em.merge(person);
 			em.getTransaction().commit();
+			em.getTransaction().begin();
 		} finally {
 	        if(em.getTransaction().isActive()){
 	            System.out.println("Entity Manager Rollback");
 	            em.getTransaction().rollback();
 	        }
-	        em.close();
+			em.getTransaction().begin();
 		}
 
 		return null;
