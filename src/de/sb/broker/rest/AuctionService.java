@@ -26,8 +26,6 @@ import de.sb.broker.model.Person;
 
 @Path("auctions")
 public class AuctionService {
-
-	private static final EntityManagerFactory emf = Persistence.createEntityManagerFactory("broker");
 	
 	/**
 	 * Returns the auctions matching the given criteria, with null or missing
@@ -36,21 +34,20 @@ public class AuctionService {
 	 */
 	@GET
 	@Produces({MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML})
-	@Auction.XmlSellerAsEntityFilter
 	public List<Auction> getAuctions(
-			@NotNull @HeaderParam ("Authorization") String authentication
-	){
-		final EntityManager em = emf.createEntityManager();
+		@NotNull @HeaderParam ("Authorization") String authentication){
+		final EntityManager em = LifeCycleProvider.brokerManager();
 		List<Auction> l;
 		Person requester = LifeCycleProvider.authenticate(authentication);
 		try{			
+			em.getTransaction().begin();
 			TypedQuery<Auction> query = em.createQuery("SELECT a FROM Auction a", Auction.class);
 			l =  query.getResultList();
 		}catch(NoResultException e){
 			l = new ArrayList<Auction>();
 		}finally{
 			if(em.getTransaction().isActive()) em.getTransaction().rollback();
-			em.close();
+			em.getTransaction().begin();
 		}
 		return l;
 	}
@@ -60,6 +57,7 @@ public class AuctionService {
 	 * that an auction may only be modified as long as it is not sealed (i.e. is open and still
 	 * without bids).
 	 */
+	/*
 	@PUT
 	@Produces(MediaType.APPLICATION_XML)
 	public void setAuction(
@@ -107,13 +105,65 @@ public class AuctionService {
 				}
 				em.getTransaction().commit();
 			}
+	*/
+
+	public void createAuction(
+		@NotNull @HeaderParam ("Authorization") String authentication
+		@Valid Auction tmp){
+		final EntityManager em = LifeCycleProvider.brokerManager();
+		Person requester = LifeCycleProvider.authenticate(authentication);
+		try{
+			tmp.setSeller(requester);
+			em.getTransaction().begin();
+			em.persist(tmp);
+			em.getTransaction().commit();
+			em.getTransaction().begin();
 		}finally{
 	        if(em.getTransaction().isActive()){
 	            System.out.println("Entity Manager Rollback");
 	            em.getTransaction().rollback();
 	        }   
-	        em.clear();
-	        em.close();
+			em.getTransaction().begin();
+			RestHelper.update2ndLevelCache(em, tmp);
+		}
+	}
+	
+	/**
+	 * Creates or modifies an auction from the given template data. Note
+	 * that an auction may only be modified as long as it is not sealed (i.e. is open and still
+	 * without bids).
+	 */
+	@PUT
+	@Path("{identity}")
+	@Produces(MediaType.APPLICATION_XML)
+	public void updateAuction(
+		@NotNull @HeaderParam ("Authorization") String authentication,
+		@Valid Auction tmp,
+		@PathParam("identity") final Long identity){
+		final EntityManager em = LifeCycleProvider.brokerManager();
+		Person requester = LifeCycleProvider.authenticate(authentication);
+		try{
+			em.getTransaction().begin();
+			Auction a = em.find(Auction.class, identity);
+			if (a.getSeller().getIdentity() == requester.getIdentity()) {
+				if(!a.isClosed() && a.getBids().size() <= 0){ // update auction
+					if(tmp.getAskingPrice() != 0) a.setAskingPrice(tmp.getAskingPrice());
+					if(tmp.getClosureTimestamp() != 0) a.setClosureTimestamp(tmp.getClosureTimestamp());
+					if(tmp.getDescription() != null) a.setDescription(tmp.getDescription());
+					if(tmp.getSeller() != null) a.setSeller(tmp.getSeller());
+					if(tmp.getTitle() != null) a.setTitle(tmp.getTitle());
+					if(tmp.getUnitCount() != 0)a.setUnitCount(tmp.getUnitCount());
+					if(tmp.getVersion() != 0)a.setVersion(tmp.getVersion());
+				}
+				em.getTransaction().commit();
+			}
+		}finally{
+	        if(em.getTransaction().isActive()){
+	            System.out.println("Entity Manager Rollback");
+	            em.getTransaction().rollback();
+	        }
+			RestHelper.update2ndLevelCache(em, tmp);
+			em.getTransaction().begin();
 		}
 	}
 	
@@ -128,20 +178,21 @@ public class AuctionService {
 	@Auction.XmlSellerAsReferenceFilter
 	public List<Auction> getAuctionIdentityXML(
 			@NotNull @HeaderParam ("Authorization") String authentication, 
-			@PathParam("identity") final long id
-	){
-		final EntityManager em = emf.createEntityManager();
+			@PathParam("identity") final long id){
+		final EntityManager em = LifeCycleProvider.brokerManager();
+		Person requester = LifeCycleProvider.authenticate(authentication);
 		List<Auction> l;
-		try{			
+		try{
+			em.getTransaction().begin();
 			TypedQuery<Auction> query = em
-					.createQuery("SELECT a FROM Auction a WHERE a.seller.identity = :id", Auction.class)
+					.createQuery("SELECT a FROM Auction a WHERE a.identity = :id", Auction.class)
 					.setParameter("id", id);
 			l =  query.getResultList();
 		}catch(NoResultException e){
 			l = new ArrayList<Auction>();
 		}finally{
 			if(em.getTransaction().isActive()) em.getTransaction().rollback();
-			em.close();
+			em.getTransaction().begin();
 		}
 		return l;
 	}
@@ -156,9 +207,8 @@ public class AuctionService {
 	@Produces(MediaType.APPLICATION_XML)
 	public Bid getBidForAuction(
 			@NotNull @HeaderParam ("Authorization") String authentication, 
-			@PathParam("identity") final long id
-	){
-		final EntityManager em = emf.createEntityManager();
+			@PathParam("identity") final long id){
+		final EntityManager em = LifeCycleProvider.brokerManager();
 		Person requester = LifeCycleProvider.authenticate(authentication);
 		Bid b;
 		try{			
@@ -171,7 +221,7 @@ public class AuctionService {
 			b = null;
 		}finally{
 			if(em.getTransaction().isActive()) em.getTransaction().rollback();
-			em.close();
+			em.getTransaction().begin();
 		}
 		return b;
 	}
@@ -190,7 +240,7 @@ public class AuctionService {
 			@PathParam("identity") final long id,
 			@Valid final long price
 	){
-		final EntityManager em = emf.createEntityManager();
+		final EntityManager em = LifeCycleProvider.brokerManager();
 		Person requester = LifeCycleProvider.authenticate(authentication);
 		Bid b;
 		try{			
@@ -207,15 +257,19 @@ public class AuctionService {
 			}
 			em.getTransaction().commit();
 		}catch(NoResultException e){
-			em.getTransaction().begin();
-			Auction a = em.find(Auction.class, id);
-			b = new Bid(a, requester);
-			b.setPrice(price);
-			em.persist(b);
-			em.getTransaction().commit();
+			try {
+				em.getTransaction().begin();
+				Auction a = em.find(Auction.class, id);
+				b = new Bid(a, requester);
+				b.setPrice(price);
+				em.persist(b);
+				em.getTransaction().commit();
+			} finally {
+				if(em.getTransaction().isActive()) em.getTransaction().rollback();
+			}
 		} finally {
 			if(em.getTransaction().isActive()) em.getTransaction().rollback();
-			em.close();
+			em.getTransaction().begin();
 		}
 	}
 }

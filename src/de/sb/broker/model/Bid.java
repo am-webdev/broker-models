@@ -24,13 +24,11 @@ public class Bid extends BaseEntity {
 	@Min(1)
 	private long price; 		// in cents, min: 1  max: Long.max
 	
-	@XmlElement
 	@ManyToOne
 	//@JoinColumn(name = "auctionIdentity")
 	@JoinColumn(name = "auctionReference")
 	private Auction auction;
 	
-	@XmlElement
 	@ManyToOne
 	//@JoinColumn(name = "personIdentity")
 	@JoinColumn(name = "bidderReference")

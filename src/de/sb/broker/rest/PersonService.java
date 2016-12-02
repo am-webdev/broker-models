@@ -1,7 +1,5 @@
 package de.sb.broker.rest;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -10,12 +8,17 @@ import java.util.ArrayList;
 import java.util.List;
 
 import javax.activation.MimetypesFileTypeMap;
+import javax.persistence.Cache;
 import javax.persistence.EntityManager;
 import javax.persistence.EntityManagerFactory;
 import javax.persistence.NoResultException;
 import javax.persistence.Persistence;
 import javax.persistence.TypedQuery;
 import javax.validation.constraints.NotNull;
+import javax.persistence.criteria.CriteriaBuilder;
+import javax.persistence.criteria.CriteriaQuery;
+import javax.persistence.criteria.Root;
+import javax.validation.Valid;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.GET;
 import javax.ws.rs.HeaderParam;
@@ -36,53 +39,34 @@ import de.sb.broker.model.Person.Group;
 @Path("people")
 public class PersonService {
 	
-	private static final EntityManagerFactory emf = Persistence.createEntityManagerFactory("broker");
-	
+	/**
+	 * Returns the people matching the given criteria, with null or missing parameters identifying omitted criteria.
+	 * @return
+	 */
 	@GET
 	@Produces({MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML})
-	public List<Person> getPeople(){
-		final EntityManager em = emf.createEntityManager();
+	public List<Person> getPeople() {
+		final EntityManager em = LifeCycleProvider.brokerManager();
+		
 		List<Person> l;
 		try{
+			em.getTransaction().begin();
 			TypedQuery<Person> q = em.createQuery("SELECT p FROM Person p", Person.class);
 			l =  q.getResultList();
 		}catch(NoResultException e){
 			l = new ArrayList<Person>();
 		}finally{
 			if(em.getTransaction().isActive()) em.getTransaction().rollback();
-			em.close();
+			em.getTransaction().begin();
 		}
 		return l;
 	}
 	
-	@PUT
-	@Consumes(MediaType.APPLICATION_JSON)
-	public void setPerson(
-			@NotNull @HeaderParam ("Authorization") String authentication, 
-			Person p, @HeaderParam("Set-password") final String pw){
-		final EntityManager em = emf.createEntityManager();
-		Person requester = LifeCycleProvider.authenticate(authentication);
-		if(p.getGroup() != Group.ADMIN || (p.getGroup() == Group.ADMIN && requester.getGroup() == Group.ADMIN)) {
-			try{
-				
-				em.getTransaction().begin();
-				
-				p.setPasswordHash(Person.passwordHash(pw));
-				Document d = new Document("application/image-png", new byte[]{0,0,1,0}, new byte[]{0,0,1,0});
-				p.setAvatar(d);
-				em.find(Person.class, p.getIdentity());
-				em.merge(p);
-				em.merge(d);
-				em.getTransaction().commit();
-			}finally{
-				if(em.getTransaction().isActive()) em.getTransaction().rollback();
-				em.close();
-			}
-		} else {
-			//TODO throw not authorized to set Group to ADMIN if requester not ADMIN
-		}
-	}
-	
+	/**
+	 * Returns the person matching the given identity.
+	 * @param id
+	 * @return
+	 */
 	@GET
 	@Path("/requester")
 	@Produces({MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML})
@@ -95,9 +79,10 @@ public class PersonService {
 	@Path("{identity}")
 	@Produces({MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML})
 	public Person getPeopleIdentity(@PathParam("identity") final long id){
-		final EntityManager em = emf.createEntityManager();
+		final EntityManager em = LifeCycleProvider.brokerManager();
 		Person p;
 		try{
+			em.getTransaction().begin();
 			TypedQuery<Person> query = em
 					.createQuery("SELECT p FROM Person p WHERE p.identity = :id", Person.class)
 					.setParameter("id", id);
@@ -106,42 +91,52 @@ public class PersonService {
 			p = new Person();
 		}finally{
 			if(em.getTransaction().isActive()) em.getTransaction().rollback();
-			em.close();
+			em.getTransaction().begin();
 		}
 		return p;
 	}
 	
+	/**
+	 * Returns all auctions associated with the person matching the given identity (as seller or bidder).
+	 * @param id
+	 * @return
+	 */
 	@GET
 	@Path("{identity}/auctions")
 	@Produces({MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML})
 	public List<Auction> getPeopleIdentityAuctions(@PathParam("identity") final long id){
-		final EntityManager em = emf.createEntityManager();
+		final EntityManager em = LifeCycleProvider.brokerManager();
 		List<Auction> l;
-		//TODO: fetch join 
 		try{
-			TypedQuery<Auction> query = em.createQuery("SELECT a FROM Auction a LEFT JOIN a.bids b WHERE a.seller.identity = :id OR b.bidder.identity = :id", Auction.class) //TODO: include bidders :D
+			em.getTransaction().begin();
+			TypedQuery<Auction> query = em.createQuery("SELECT a FROM Auction a LEFT JOIN a.bids b WHERE a.seller.identity = :id OR b.bidder.identity = :id", Auction.class)
 					.setParameter("id", id);
 			l = query.getResultList();
 		}catch(NoResultException e){
 			l = new ArrayList<Auction>();
 		}finally{
 			if(em.getTransaction().isActive()) em.getTransaction().rollback();
-			em.close();
+			em.getTransaction().begin();
 		}
 		return l;
 	}
 	
+	/**
+	 * Returns all bids for closed auctions associated with the bidder matching the given identity.
+	 * @param id
+	 * @return
+	 */
 	@GET
 	@Path("{identity}/bids")
 	@Produces({MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML})
 	public List<Bid> getPeopleIdentityBids(
-			@NotNull @HeaderParam ("Authorization") String authentication, 
-			@PathParam("identity") final long id){
-		final EntityManager em = emf.createEntityManager();
+					@NotNull @HeaderParam ("Authorization") String authentication, 
+					@PathParam("identity") final long id){
+		final EntityManager em = LifeCycleProvider.brokerManager();
 		Person requester = LifeCycleProvider.authenticate(authentication);
-		//TODO -> join with auctions, check closureTimeStamp
 		List<Bid> l = new ArrayList<Bid>();
 		try{
+			em.getTransaction().begin();
 			TypedQuery<Bid> query;
 			if(id == requester.getIdentity()) {
 				query = em.createQuery("SELECT b FROM Bid b JOIN b.auction a WHERE b.bidder.identity = :id", Bid.class)
@@ -157,52 +152,109 @@ public class PersonService {
 			l = new ArrayList<Bid>();
 		}finally{
 			if(em.getTransaction().isActive()) em.getTransaction().rollback();
-			em.close();
+			em.getTransaction().begin();
 		}
 		return l;
 	}
 	
+	/**
+	 * Creates a new person if the given Person template's identity is zero, or
+	 * otherwise updates the corresponding person with template data. Optionally, a new
+	 * password may be set using the header field â€œSet-passwordâ€�. Returns the affected
+	 * person's identity.
+     * @param tmp
+     * @param pw
+     */
+    @PUT
+    @Consumes(MediaType.APPLICATION_JSON)
+    public void createPerson(@Valid Person tmp, @HeaderParam("Set-password") final String pw){
+		final EntityManager em = LifeCycleProvider.brokerManager();
+        System.out.println(tmp);
+        try{
+            em.getTransaction().begin();
+            
+            // set password hash
+            // example hash 2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824
+            // meaning hello
+            tmp.setPasswordHash(Person.passwordHash(pw));
+            
+            // set default avatar - obsolete, field can be NULL
+            // p.setAvatar(new Document("application/image-png", new byte[]{}, new byte[]{}));
+            em.persist(tmp);
+            em.getTransaction().commit();
+    		em.getTransaction().begin();
+        }finally{
+            if(em.getTransaction().isActive()){
+                System.out.println("Entity Manager Rollback");
+                em.getTransaction().rollback();
+            }
+			em.getTransaction().begin();
+            RestHelper.update2ndLevelCache(em, tmp);
+        }
+    }
+    
+	/**
+	 * Creates a new person if the given Person template's identity is zero, or
+	 * otherwise updates the corresponding person with template data. Optionally, a new
+	 * password may be set using the header field â€œSet-passwordâ€�. Returns the affected
+	 * person's identity.
+     * @param p
+     * @param pw
+     */
+    @PUT
+	@Path("{identity}")
+    @Consumes(MediaType.APPLICATION_JSON)
+    public void updatePerson(@Valid Person tmp,
+    		@HeaderParam("Set-password") final String pw,
+    		@PathParam("identity") final Long personIdentity) {
+		final EntityManager em = LifeCycleProvider.brokerManager();
+        try{
+    		em.getTransaction().begin();
+    		Person p = em.find(Person.class, personIdentity);
+    		if(tmp.getAlias() != null) p.setAlias(tmp.getAlias());
+    		if(tmp.getGroup() != null) p.setGroup(tmp.getGroup());
+    		if(tmp.getName() != null) p.setName(tmp.getName());
+    		if(tmp.getAddress() != null) p.setAddress(tmp.getAddress());
+    		if(tmp.getContact() != null) p.setContact(tmp.getContact());
+    		if(pw != "") p.setPasswordHash(Person.passwordHash(pw));
+    		em.getTransaction().commit();
+    		em.getTransaction().begin();
+        }finally{
+            if(em.getTransaction().isActive()){
+                System.out.println("Entity Manager Rollback");
+                em.getTransaction().rollback();
+            }   
+			em.getTransaction().begin();
+			RestHelper.update2ndLevelCache(em, tmp);
+        }
+    }
 	
 	/* Services for avatar */
 	@GET
 	@Path("{identity}/avatar")
-	@Produces("image/*")
-	public Response getAvatar(@PathParam("identity")  String id) throws Exception {
+	@Produces(MediaType.WILDCARD)
+	public Response getAvatar(@PathParam("identity") final Long personIdentity) throws Exception {
 		// Select from Database
-		final EntityManager em = emf.createEntityManager();
+		final EntityManager em = LifeCycleProvider.brokerManager();
 		Document d = null;
-		long personIdentity = Long.getLong(id);
+		Person p = null;
 		try{
-			/*
-			 * Working MySQL Statement:
-			 * SELECT * FROM Document d 
-			 * JOIN Person p ON d.documentIdentity 
-			 * WHERE p.avatarReference = d.documentIdentity 
-			 * AND p.personIdentity = :id
-			 * 
-			 * TODO implement as JPQL query
-			 */
-			TypedQuery<Document> query = em
-					.createQuery("SELECT d FROM Document d JOIN Person p WHERE p.identity = :id", Document.class)
-					.setParameter("id", personIdentity);
-			d = query.getSingleResult();
+			em.getTransaction().begin();
+			// with CriteriaQuery
+			CriteriaBuilder cb = em.getCriteriaBuilder();
+			CriteriaQuery<Person> q = cb.createQuery(Person.class);
+			Root<Person> rootPerson = q.from(Person.class);
+			q.where(cb.equal(rootPerson.get("identity"), personIdentity));
+			
+			d = em.createQuery(q).getSingleResult().getAvatar();
+			
 		} finally{
 			if(em.getTransaction().isActive()) em.getTransaction().rollback();
-			em.close();
+			em.getTransaction().begin();
 		}
-		System.out.println(d);
-	 
-		final ByteArrayInputStream in = new ByteArrayInputStream(d.getContent());
-	   
-		ByteArrayOutputStream out = new ByteArrayOutputStream();
-		int data = in.read();
-		while (data >= 0) {
-			out.write((char) data);
-			data = in.read();
-		}
-		out.flush();
 	     
-		ResponseBuilder builder = Response.ok(out.toByteArray());
+		ResponseBuilder builder = Response.ok(d.getContent());
+		builder.header("Content-Type", d.getType());
 		builder.header("Content-Disposition", "attachment; filename=avatar");
 		return builder.build();
     }
@@ -211,13 +263,12 @@ public class PersonService {
 	@Path("{identity}/avatar")
 	@Consumes(MediaType.WILDCARD)
 	public Response setAvatar(
-			@PathParam("identity")  String id,
+			@PathParam("identity")  final long personIdentity,
 			byte[] fileBytes) throws Exception  {
 		
 		// Entitiy Manager used several times, but closed after each transition
-    	final EntityManager em = emf.createEntityManager();
+		final EntityManager em = LifeCycleProvider.brokerManager();
     	Document uploadedDocument = null;
-    	Long personIdentity = Long.parseLong(id);
 		
 		/*
 		 * Read from Array of Bytes to temporary File "outputfile"
@@ -251,7 +302,7 @@ public class PersonService {
         byte[] mdbytes = md.digest();
         StringBuffer hexString = new StringBuffer();
     	for (int i=0;i<mdbytes.length;i++) {
-    	  hexString.append(Integer.toHexString(0xFF & mdbytes[i]));
+    		hexString.append(Integer.toHexString(0xFF & mdbytes[i]));
     	}
     	String sha256Hash = hexString.toString();
     	System.out.println("\tSHA-265: " + sha256Hash);
@@ -263,6 +314,7 @@ public class PersonService {
 		 */
 		List<Document> l;
 		try{
+			em.getTransaction().begin();
 			TypedQuery<Document> q = em.createQuery("SELECT d FROM Document d WHERE d.hash = :hash", Document.class)
 					.setParameter("hash", uploadedDocument.getHash());	// value is stored as "byte[32] --> cannot compare with String
 			l =  q.getResultList();
@@ -271,6 +323,7 @@ public class PersonService {
 		}finally{
 			if(em.getTransaction().isActive()) em.getTransaction().rollback();
 			em.clear();
+			em.getTransaction().begin();
 		}
 		System.out.println("Matching entries for given hash ("+ sha256Hash +"): " + l.size());
 		
@@ -285,6 +338,7 @@ public class PersonService {
 				em.getTransaction().begin();
 				em.persist(uploadedDocument);
 				em.getTransaction().commit();
+				em.getTransaction().begin();
 				System.out.println("saved new avatar to db: " + uploadedDocument.toString());
 			} else { // Update existing avatar
 				if (uploadedDocument.getType().equals(l.get(0).getType())) {	// Check of Mime type needs to be updated
@@ -292,8 +346,9 @@ public class PersonService {
 					Document avatar = em.find(Document.class, l.get(0).getIdentity());
 					avatar.setVersion(avatar.getVersion());
 					avatar.setType(uploadedDocument.getType());
-					em.merge(avatar);
+					// em.merge(avatar);
 					em.getTransaction().commit();
+					em.getTransaction().begin();
 					System.out.println("saved updated avatar within db: " + uploadedDocument.toString());
 				} else {
 					System.out.println("Nothing to do in here");
@@ -304,7 +359,8 @@ public class PersonService {
 	            System.out.println("Entity Manager Rollback");
 	            em.getTransaction().rollback();
 	        }
-	        em.clear();
+			em.clear();
+			em.getTransaction().begin();
 		}
 		
 
@@ -317,20 +373,22 @@ public class PersonService {
 		try {
 			em.getTransaction().begin();
 			Person person = em.find(Person.class, personIdentity);
+			Document doc = em.find(Document.class, l.get(0).getIdentity());
 			if (uploadedDocument.getContent().length != 0) {
-				person.setAvatar(uploadedDocument);
+				person.setAvatar(doc);
 			} else {
 				person.setAvatar(new Document("", new byte[32], new byte[32]));
 				System.out.println("clear avatar of person");
 			}
 			em.merge(person);
 			em.getTransaction().commit();
+			em.getTransaction().begin();
 		} finally {
 	        if(em.getTransaction().isActive()){
 	            System.out.println("Entity Manager Rollback");
 	            em.getTransaction().rollback();
 	        }
-	        em.close();
+			em.getTransaction().begin();
 		}
 
 		return null;

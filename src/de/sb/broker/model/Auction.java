@@ -68,7 +68,6 @@ public class Auction extends BaseEntity {
 	@Size(min = 1, max = 8189)
 	private String description;
 
-	@XmlElement
 	@ManyToOne
 	@JoinColumn(name = "sellerReference")
 	private Person seller;
