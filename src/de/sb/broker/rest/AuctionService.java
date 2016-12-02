@@ -7,9 +7,13 @@ import javax.persistence.EntityManager;
 import javax.persistence.EntityManagerFactory;
 import javax.persistence.NoResultException;
 import javax.persistence.Persistence;
+import javax.persistence.RollbackException;
 import javax.persistence.TypedQuery;
 import javax.validation.Valid;
 import javax.validation.constraints.NotNull;
+import javax.validation.ValidationException;
+import javax.validation.constraints.NotNull;
+import javax.ws.rs.ClientErrorException;
 import javax.ws.rs.GET;
 import javax.ws.rs.HeaderParam;
 import javax.ws.rs.POST;
@@ -17,6 +21,7 @@ import javax.ws.rs.PUT;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
+import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 
 import de.sb.broker.model.Auction;
@@ -35,17 +40,25 @@ public class AuctionService {
 	@GET
 	@Produces({MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML})
 	public List<Auction> getAuctions(
-		@NotNull @HeaderParam ("Authorization") String authentication){
+		@NotNull @HeaderParam ("Authorization") String authentication),
+		@QueryParam("closed") final boolean isClosed){
 		final EntityManager em = LifeCycleProvider.brokerManager();
 		List<Auction> l;
-		Person requester = LifeCycleProvider.authenticate(authentication);
-		try{			
+		try{
 			em.getTransaction().begin();
-			TypedQuery<Auction> query = em.createQuery("SELECT a FROM Auction a", Auction.class);
+			String queryString = "SELECT a FROM Auction a";
+			if (isClosed) {
+				queryString += " WHERE a.closureTimestamp < "+ System.currentTimeMillis();
+				// Can we do something like: queryString = "SELECT a FROM Auction a WHERE a.isClosed = true";
+			} 
+			TypedQuery<Auction> query = em.createQuery(queryString, Auction.class);
 			l =  query.getResultList();
-		}catch(NoResultException e){
-			l = new ArrayList<Auction>();
-		}finally{
+		} catch(NoResultException e){
+			throw new ClientErrorException(e.getMessage(), 404);
+			//l = new ArrayList<Auction>();
+		} catch(Exception e) {
+			throw new ClientErrorException(e.getMessage(), 500);
+		} finally{
 			if(em.getTransaction().isActive()) em.getTransaction().rollback();
 			em.getTransaction().begin();
 		}
@@ -60,6 +73,7 @@ public class AuctionService {
 	/*
 	@PUT
 	@Produces(MediaType.APPLICATION_XML)
+<<<<<<< HEAD
 	public void setAuction(
 			@NotNull @HeaderParam ("Authorization") String authentication,
 			@Valid @NotNull Auction template
@@ -117,8 +131,13 @@ public class AuctionService {
 			em.getTransaction().begin();
 			em.persist(tmp);
 			em.getTransaction().commit();
-			em.getTransaction().begin();
-		}finally{
+		} catch(ValidationException e) {
+			throw new ClientErrorException(e.getMessage(), 409);
+		} catch(RollbackException e) {
+			throw new ClientErrorException(e.getMessage(), 409);
+		} catch(Exception e) {
+			throw new ClientErrorException(e.getMessage(), 500);
+		} finally{
 	        if(em.getTransaction().isActive()){
 	            System.out.println("Entity Manager Rollback");
 	            em.getTransaction().rollback();
@@ -139,25 +158,31 @@ public class AuctionService {
 	public void updateAuction(
 		@NotNull @HeaderParam ("Authorization") String authentication,
 		@Valid Auction tmp,
-		@PathParam("identity") final Long identity){
+		@PathParam("identity"){
 		final EntityManager em = LifeCycleProvider.brokerManager();
 		Person requester = LifeCycleProvider.authenticate(authentication);
 		try{
 			em.getTransaction().begin();
 			Auction a = em.find(Auction.class, identity);
-			if (a.getSeller().getIdentity() == requester.getIdentity()) {
-				if(!a.isClosed() && a.getBids().size() <= 0){ // update auction
-					if(tmp.getAskingPrice() != 0) a.setAskingPrice(tmp.getAskingPrice());
-					if(tmp.getClosureTimestamp() != 0) a.setClosureTimestamp(tmp.getClosureTimestamp());
-					if(tmp.getDescription() != null) a.setDescription(tmp.getDescription());
-					if(tmp.getSeller() != null) a.setSeller(tmp.getSeller());
-					if(tmp.getTitle() != null) a.setTitle(tmp.getTitle());
-					if(tmp.getUnitCount() != 0)a.setUnitCount(tmp.getUnitCount());
-					if(tmp.getVersion() != 0)a.setVersion(tmp.getVersion());
-				}
-				em.getTransaction().commit();
+			if(!a.isClosed() && a.getBids().size() <= 0){ // update auction
+				if(tmp.getAskingPrice() != 0) a.setAskingPrice(tmp.getAskingPrice());
+				if(tmp.getClosureTimestamp() != 0) a.setClosureTimestamp(tmp.getClosureTimestamp());
+				if(tmp.getDescription() != null) a.setDescription(tmp.getDescription());
+				if(tmp.getSeller() != null) a.setSeller(tmp.getSeller());
+				if(tmp.getTitle() != null) a.setTitle(tmp.getTitle());
+				if(tmp.getUnitCount() != 0)a.setUnitCount(tmp.getUnitCount());
+				if(tmp.getVersion() != 0)a.setVersion(tmp.getVersion());
 			}
-		}finally{
+			em.getTransaction().commit();
+		} catch(ValidationException e) {
+			throw new ClientErrorException(e.getMessage(), 409);
+		} catch(RollbackException e) {
+			throw new ClientErrorException(e.getMessage(), 409);
+		} catch(NoResultException e){
+			throw new ClientErrorException(e.getMessage(), 404);
+		} catch(Exception e) {
+			throw new ClientErrorException(e.getMessage(), 500);
+		} finally{
 	        if(em.getTransaction().isActive()){
 	            System.out.println("Entity Manager Rollback");
 	            em.getTransaction().rollback();
@@ -188,9 +213,11 @@ public class AuctionService {
 					.createQuery("SELECT a FROM Auction a WHERE a.identity = :id", Auction.class)
 					.setParameter("id", id);
 			l =  query.getResultList();
-		}catch(NoResultException e){
-			l = new ArrayList<Auction>();
-		}finally{
+		} catch(NoResultException e){
+			throw new ClientErrorException(e.getMessage(), 404);
+		} catch(Exception e) {
+			throw new ClientErrorException(e.getMessage(), 500);
+		} finally{
 			if(em.getTransaction().isActive()) em.getTransaction().rollback();
 			em.getTransaction().begin();
 		}
