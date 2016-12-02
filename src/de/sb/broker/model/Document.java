@@ -8,6 +8,8 @@ import javax.persistence.PrimaryKeyJoinColumn;
 import javax.persistence.Table;
 import javax.validation.constraints.Size;
 
+import org.eclipse.persistence.annotations.CacheIndex;
+
 @Entity
 @Table(name="Document", schema="_s0545840__brokerDB")
 @PrimaryKeyJoinColumn(name = "documentIdentity")	
@@ -23,6 +25,7 @@ public class Document extends BaseEntity {
 	private byte[] content;
 
 	@Column(name = "hash", updatable=false, nullable=false, insertable=true)
+	@CacheIndex(updateable = false)
 	@Size(min = 32, max = 32)
 	private byte[] hash;
 	

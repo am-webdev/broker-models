@@ -5,6 +5,7 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.security.MessageDigest;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 
 import javax.activation.MimetypesFileTypeMap;
@@ -48,17 +49,29 @@ public class PersonService {
 	@Produces({MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML})
 	public List<Person> getPeople(){
 		final EntityManager em = emf.createEntityManager();
-		List<Person> l;
-		try{
-			TypedQuery<Person> q = em.createQuery("SELECT p FROM Person p", Person.class);
+		List<Long> l;
+		List<Person> people;
+		try{ /*more WHERE clauses AND verknüpft */
+			TypedQuery<Long> q = em.createQuery("SELECT p.identity FROM Person p WHERE (:alias IS NULL OR p.alias = :alias)", Long.class);
+			q.setParameter("alias", null); //set alias from param (matrix parameter / query parameter)
 			l =  q.getResultList();
+			people = new ArrayList<Person>();
+			for (Long id : l) {
+				Person p = em.find(Person.class, id);
+				if(p != null)
+					people.add(p);
+			}
+			
+			//sort people by alias (descending) TODO 
+			Comparator<Person> comparator = Comparator.comparing(Person::getAlias).thenComparing(Person::getIdentity);
+			people.sort(comparator);
 		}catch(NoResultException e){
-			l = new ArrayList<Person>();
+			people = new ArrayList<Person>();
 		}finally{
 			if(em.getTransaction().isActive()) em.getTransaction().rollback();
 			em.close();
 		}
-		return l;
+		return people;
 	}
 	
 	/**
@@ -71,19 +84,15 @@ public class PersonService {
 	@Produces({MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML})
 	public Person getPeopleIdentity(@PathParam("identity") final long id){
 		final EntityManager em = emf.createEntityManager();
-		Person p;
 		try{
-			TypedQuery<Person> query = em
-					.createQuery("SELECT p FROM Person p WHERE p.identity = :id", Person.class)
-					.setParameter("id", id);
-			p = query.getSingleResult();
-		}catch(NoResultException e){
-			p = new Person();
+
+			Person p = em.find(Person.class, id); // TODO Check for null
+			return p;
 		}finally{
 			if(em.getTransaction().isActive()) em.getTransaction().rollback();
 			em.close();
 		}
-		return p;
+		
 	}
 	
 	/**
@@ -95,19 +104,20 @@ public class PersonService {
 	@Path("{identity}/auctions")
 	@Produces({MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML})
 	public List<Auction> getPeopleIdentityAuctions(@PathParam("identity") final long id){
-		final EntityManager em = emf.createEntityManager();
-		List<Auction> l;
+		final EntityManager em = emf.createEntityManager();		
 		try{
-			TypedQuery<Auction> query = em.createQuery("SELECT a FROM Auction a LEFT JOIN a.bids b WHERE a.seller.identity = :id OR b.bidder.identity = :id", Auction.class)
-					.setParameter("id", id);
-			l = query.getResultList();
-		}catch(NoResultException e){
-			l = new ArrayList<Auction>();
-		}finally{
+			List<Auction> l = new ArrayList<Auction>();
+			Person p = em.find(Person.class, id);
+			l.addAll(p.getAuctions());
+			for (Bid b : p.getBids()) {
+				l.add(b.getAuction());
+			}
+			//TODO sort
+			return l;
+		} finally {
 			if(em.getTransaction().isActive()) em.getTransaction().rollback();
 			em.close();
 		}
-		return l;
 	}
 	
 	/**
@@ -121,6 +131,7 @@ public class PersonService {
 	public List<Bid> getPeopleIdentityBids(@PathParam("identity") final long id){
 		final EntityManager em = emf.createEntityManager();
 		List<Bid> l = new ArrayList<Bid>();
+		// TODO see above
 		try{
 			long ts = System.currentTimeMillis();
 			TypedQuery<Bid> query = em.createQuery("SELECT b FROM Bid b JOIN b.auction a WHERE a.closureTimestamp < :ts AND b.bidder.identity = :id", Bid.class)
@@ -146,27 +157,34 @@ public class PersonService {
      */
     @PUT
     @Consumes(MediaType.APPLICATION_JSON)
-    public void createPerson(@Valid Person tmp, @HeaderParam("Set-password") final String pw){
+    public void createPerson(@Valid Person tmp, @HeaderParam("Set-password") final String pw){ //TODO rename set
         final EntityManager em = emf.createEntityManager();
-        System.out.println(tmp);
         try{
             em.getTransaction().begin();
-            
+            final boolean insertMode = tmp.getIdentity() == 0; // if 0 create new
+            final Person person;
+            if(insertMode) {
+            	person = new Person();
+            } else {
+            	person = em.find(Person.class, tmp.getIdentity());
+      
+            }
+            //TODO set person.X = tmp.X
+
             // set password hash
             // example hash 2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824
             // meaning hello
             tmp.setPasswordHash(Person.passwordHash(pw));
-            
-            // set default avatar - obsolete, field can be NULL
-            // p.setAvatar(new Document("application/image-png", new byte[]{}, new byte[]{}));
-            em.persist(tmp);
+            if(insertMode) {
+            	em.persist(person);	
+            } else {
+            	em.flush();
+            }
             em.getTransaction().commit();
-        }finally{
+        } finally {
             if(em.getTransaction().isActive()){
-                System.out.println("Entity Manager Rollback");
                 em.getTransaction().rollback();
             }
-            RestHelper.update2ndLevelCache(em, tmp);
             em.close();
         }
     }
@@ -178,7 +196,7 @@ public class PersonService {
 	 * person's identity.
      * @param p
      * @param pw
-     */
+     
     @PUT
 	@Path("{identity}")
     @Consumes(MediaType.APPLICATION_JSON)
@@ -205,128 +223,87 @@ public class PersonService {
             em.close();
         }
     }
-	
+	*/
+    
 	/* Services for avatar */
 	@GET
 	@Path("{identity}/avatar")
 	@Produces(MediaType.WILDCARD)
-	public Response getAvatar(@PathParam("identity") final Long personIdentity) throws Exception {
+	public Response getAvatar(@PathParam("identity") final long personIdentity) throws Exception {
 		// Select from Database
 		final EntityManager em = emf.createEntityManager();
 		Document d = null;
 		Person p = null;
 		try{			
 			// with CriteriaQuery
-			CriteriaBuilder cb = em.getCriteriaBuilder();
-			CriteriaQuery<Person> q = cb.createQuery(Person.class);
-			Root<Person> rootPerson = q.from(Person.class);
-			q.where(cb.equal(rootPerson.get("identity"), personIdentity));
-			
-			d = em.createQuery(q).getSingleResult().getAvatar();
-			
+			//mit em lösen TODO
+			p = em.find(Person.class, personIdentity);
+			d = p.getAvatar();
+			if(d == null) return Response.noContent().build();
 		} finally{
 			if(em.getTransaction().isActive()) em.getTransaction().rollback();
 			em.close();
 		}
 	     
-		ResponseBuilder builder = Response.ok(d.getContent());
-		builder.header("Content-Type", d.getType());
-		builder.header("Content-Disposition", "attachment; filename=avatar");
-		return builder.build();
+		return Response.ok(d.getContent(), d.getType()).build();
     }
 
 	@PUT
 	@Path("{identity}/avatar")
 	@Consumes(MediaType.WILDCARD)
-	public Response setAvatar(
-			@PathParam("identity")  final long personIdentity,
-			byte[] fileBytes) throws Exception  {
+	@Produces(MediaType.TEXT_PLAIN) // TODO return new id to all Put / Posts 
+	public long setAvatar(
+			@PathParam("identity") final long personIdentity,
+			byte[] content,
+			@HeaderParam ("Content-type") final String contentType) throws Exception  {
 		
 		// Entitiy Manager used several times, but closed after each transition
     	final EntityManager em = emf.createEntityManager();
     	Document uploadedDocument = null;
-		
-		/*
-		 * Read from Array of Bytes to temporary File "outputfile"
-		 */
-		File outputFile = new File("avatar");
-		FileOutputStream outputStream = new FileOutputStream(outputFile);
-	    try {
-	        outputStream.write(fileBytes);  //write the bytes and your done. 
-	    } finally {
-			System.out.println("Describe content:\n\tByte-length (Origin): " + fileBytes.length +
-					"\tByte-length (Output): " + outputFile.length());
-		}
-		
-		/*
-		 * Get MIME Type based on file
-		 */		
-	    MimetypesFileTypeMap mimeTypesMap = new MimetypesFileTypeMap();
-		String mimeType = mimeTypesMap.getContentType(outputFile);
-		System.out.println("\tMIME-Type: " + mimeType);
-
-		/*
-		 * Calculate SHA-256 Hash of input bytes
-		 */
-	    MessageDigest md = MessageDigest.getInstance("SHA-256");
-        FileInputStream fileInputSteam = new FileInputStream(outputFile.getPath());
-
-        int nread = 0;
-        while ((nread = fileInputSteam.read(fileBytes)) != -1) {
-          md.update(fileBytes, 0, nread);
-        };
-        byte[] mdbytes = md.digest();
-        StringBuffer hexString = new StringBuffer();
-    	for (int i=0;i<mdbytes.length;i++) {
-    		hexString.append(Integer.toHexString(0xFF & mdbytes[i]));
-    	}
-    	String sha256Hash = hexString.toString();
-    	System.out.println("\tSHA-265: " + sha256Hash);
     	
-		uploadedDocument = new Document(mimeType, fileBytes, mdbytes);
+	    byte[] contentHash = MessageDigest.getInstance("SHA-256").digest(content);
+	    
+		uploadedDocument = new Document(contentType, content, contentHash);
 	    
 		/*
 		 * find matching avatar based on newly created hash 
 		 */
-		List<Document> l;
-		try{
-			TypedQuery<Document> q = em.createQuery("SELECT d FROM Document d WHERE d.hash = :hash", Document.class)
+		Long l;
+		try {
+			TypedQuery<Long> q = em.createQuery("SELECT d.identity FROM Document d WHERE d.hash = :hash", Long.class)
 					.setParameter("hash", uploadedDocument.getHash());	// value is stored as "byte[32] --> cannot compare with String
-			l =  q.getResultList();
-		}catch(NoResultException e){
-			l = new ArrayList<Document>();
-		}finally{
+			l = q.getSingleResult();
+		} catch(NoResultException e) {
+			//TODO catch 
+			l = 0l;
+		} finally {
 			if(em.getTransaction().isActive()) em.getTransaction().rollback();
 			em.clear();
 		}
-		System.out.println("Matching entries for given hash ("+ sha256Hash +"): " + l.size());
-		
+
+		//TODO if hash is found -> find / if hash is not found -> persist
 		
 		/*
 		 * Depending on result length, either a new entry should be stored 
 		 * or the MIME type should be updated
 		 */
-	
+		Document avatar = null;
 		try {
-			if(l.size() == 0) { // creates new avatar
+			if(l == 0) { // creates new avatar
 				em.getTransaction().begin();
 				em.persist(uploadedDocument);
 				em.getTransaction().commit();
-				System.out.println("saved new avatar to db: " + uploadedDocument.toString());
 			} else { // Update existing avatar
-				if (uploadedDocument.getType().equals(l.get(0).getType())) {	// Check of Mime type needs to be updated
+				em.getTransaction().begin();
+				avatar = em.find(Document.class, l);		
+				if (uploadedDocument.getType().equals(avatar.getType())) {	// Check of Mime type needs to be updated
 					em.getTransaction().begin();
-					Document avatar = em.find(Document.class, l.get(0).getIdentity());
 					avatar.setVersion(avatar.getVersion());
 					avatar.setType(uploadedDocument.getType());
-					// em.merge(avatar);
-					em.getTransaction().commit();
-					System.out.println("saved updated avatar within db: " + uploadedDocument.toString());
-				} else {
-					System.out.println("Nothing to do in here");
-				}
+					em.flush();
+				} 
 			}
-		}finally{
+		} finally {
 	        if(em.getTransaction().isActive()){
 	            System.out.println("Entity Manager Rollback");
 	            em.getTransaction().rollback();
@@ -340,27 +317,26 @@ public class PersonService {
 		 * save new avatar to person
 		 * commit updated person
 		 */
-		
-		try {
-			em.getTransaction().begin();
-			Person person = em.find(Person.class, personIdentity);
-			Document doc = em.find(Document.class, l.get(0).getIdentity());
-			if (uploadedDocument.getContent().length != 0) {
-				person.setAvatar(doc);
-			} else {
-				person.setAvatar(new Document("", new byte[32], new byte[32]));
-				System.out.println("clear avatar of person");
-			}
-			em.merge(person);
-			em.getTransaction().commit();
-		} finally {
-	        if(em.getTransaction().isActive()){
-	            System.out.println("Entity Manager Rollback");
-	            em.getTransaction().rollback();
-	        }
-	        em.close();
+		if(l == 0) {
+
+			try {
+				em.getTransaction().begin();
+				Person person = em.find(Person.class, personIdentity);
+				if (uploadedDocument.getContent().length != 0) {
+					person.setAvatar(avatar);
+				} else {
+					person.setAvatar(null); //Anmerkung: wie soll ein Avatar gelöscht werden? 
+				}
+				em.flush();
+			} finally {
+		        if(em.getTransaction().isActive()){
+		            System.out.println("Entity Manager Rollback");
+		            em.getTransaction().rollback();
+		        }
+		        em.close();
+			}	
 		}
 
-		return null;
+		return avatar.getIdentity();
 	}
 }

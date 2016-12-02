@@ -30,6 +30,8 @@ import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
 import javax.xml.bind.annotation.XmlType;
 
+import org.eclipse.persistence.annotations.CacheIndex;
+
 @Entity
 @Table(name="Person", schema="_s0545840__brokerDB")
 @PrimaryKeyJoinColumn(name = "personIdentity")	
@@ -44,6 +46,7 @@ public class Person extends BaseEntity {
 	
 	@XmlElement
 	@Column(name = "alias", updatable=true, nullable=false, insertable=true)
+	@CacheIndex(updateable = true) //TODO changes cache to also index by alias //SELECT p from Person as p WHERE p.alias = :alias
 	@Size(min = 1, max = 16)
 	private String alias;
 	
@@ -74,7 +77,7 @@ public class Person extends BaseEntity {
 	@NotNull
 	private Contact contact;
 	
-	@ManyToOne(cascade = CascadeType.PERSIST)
+	@ManyToOne(cascade = CascadeType.DETACH)
 	@JoinColumn(name = "avatarReference")
 	private Document avatar;
 	

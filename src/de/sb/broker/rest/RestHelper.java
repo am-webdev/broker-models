@@ -8,7 +8,7 @@ import de.sb.broker.model.BaseEntity;
 public class RestHelper {
 	
 	public static Cache update2ndLevelCache(EntityManager em, BaseEntity entity) {
-
+		
         Long identity = entity.getIdentity();
         if (em.getEntityManagerFactory().getCache().contains(entity.getClass(), identity)) {
         	em.getEntityManagerFactory().getCache().evict(entity.getClass(), entity.getIdentity());
