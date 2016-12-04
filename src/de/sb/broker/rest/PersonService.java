@@ -1,23 +1,16 @@
 package de.sb.broker.rest;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.security.MessageDigest;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 
-import javax.activation.MimetypesFileTypeMap;
 import javax.persistence.Cache;
 import javax.persistence.EntityManager;
 import javax.persistence.EntityManagerFactory;
 import javax.persistence.NoResultException;
 import javax.persistence.Persistence;
 import javax.persistence.TypedQuery;
-import javax.persistence.criteria.CriteriaBuilder;
-import javax.persistence.criteria.CriteriaQuery;
-import javax.persistence.criteria.Root;
 import javax.validation.Valid;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.GET;
@@ -26,9 +19,9 @@ import javax.ws.rs.PUT;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
+import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
-import javax.ws.rs.core.Response.ResponseBuilder;
 
 import de.sb.broker.model.Auction;
 import de.sb.broker.model.Bid;
@@ -47,13 +40,54 @@ public class PersonService {
 	 */
 	@GET
 	@Produces({MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML})
-	public List<Person> getPeople(){
+	public List<Person> getPeople(
+			@QueryParam("lowerVersion") final Integer lowerVersion,
+			@QueryParam("upperVersion") final Integer upperVersion,
+			@QueryParam("lowerCreationTimeStamp") final Long lowerCreationTimeStamp,
+			@QueryParam("upperCreationTimeStamp") final Long upperCreationTimeStamp,
+			@QueryParam("alias") final String alias,
+			@QueryParam("group") final String group,
+			@QueryParam("family") final String family,
+			@QueryParam("given") final String given,
+			@QueryParam("city") final String city,
+			@QueryParam("postCode") final String postCode,
+			@QueryParam("street") final String street,
+			@QueryParam("email") final String email,
+			@QueryParam("phone") final String phone
+	){
 		final EntityManager em = emf.createEntityManager();
 		List<Long> l;
 		List<Person> people;
-		try{ /*more WHERE clauses AND verknüpft */
-			TypedQuery<Long> q = em.createQuery("SELECT p.identity FROM Person p WHERE (:alias IS NULL OR p.alias = :alias)", Long.class);
-			q.setParameter("alias", null); //set alias from param (matrix parameter / query parameter)
+		try{
+			TypedQuery<Long> q = em.createQuery("SELECT p.identity FROM Person p WHERE"
+					+ "(:lowerVersion IS NULL OR p.version >= :lowerVersion) AND"
+					+ "(:upperVersion IS NULL OR p.version <= :upperVersion) AND"
+					+ "(:lowerCreationTimeStamp IS NULL OR p.creationTimeStamp >= :lowerCreationTimeStamp) AND"
+					+ "(:upperCreationTimeStamp IS NULL OR p.creationTimeStamp <= :upperCreationTimeStamp) AND"
+					+ "(:alias IS NULL OR p.alias = :alias) AND"
+					+ "(:group IS NULL OR p.group = :group) AND"
+					+ "(:family IS NULL OR p.name.family = :family) AND"
+					+ "(:given IS NULL OR p.name.given = :given) AND"
+					+ "(:city IS NULL OR p.address.city = :city) AND"
+					+ "(:postCode IS NULL OR p.address.postCode = :postCode) AND"
+					+ "(:street IS NULL OR p.address.street = :street) AND"
+					+ "(:email IS NULL OR p.contact.email = :email) AND"
+					+ "(:phone IS NULL OR p.contact.phone = :phone)"
+					, Long.class);
+			q.setParameter("lowerVersion", lowerVersion);
+			q.setParameter("upperVersion", upperVersion);
+			q.setParameter("lowerCreationTimeStamp", lowerCreationTimeStamp);
+			q.setParameter("upperCreationTimeStamp", upperCreationTimeStamp);
+			q.setParameter("alias", alias);
+			q.setParameter("group", group);
+			q.setParameter("family", family);
+			q.setParameter("given", given);
+			q.setParameter("city", city);
+			q.setParameter("postCode", postCode);
+			q.setParameter("street", street);
+			q.setParameter("email", email);
+			q.setParameter("phone", phone);
+			
 			l =  q.getResultList();
 			people = new ArrayList<Person>();
 			for (Long id : l) {
@@ -61,17 +95,13 @@ public class PersonService {
 				if(p != null)
 					people.add(p);
 			}
-			
-			//sort people by alias (descending) TODO 
 			Comparator<Person> comparator = Comparator.comparing(Person::getAlias).thenComparing(Person::getIdentity);
 			people.sort(comparator);
-		}catch(NoResultException e){
-			people = new ArrayList<Person>();
+			return people;
 		}finally{
 			if(em.getTransaction().isActive()) em.getTransaction().rollback();
 			em.close();
 		}
-		return people;
 	}
 	
 	/**

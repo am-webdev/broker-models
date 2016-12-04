@@ -7,13 +7,16 @@ import javax.persistence.Lob;
 import javax.persistence.PrimaryKeyJoinColumn;
 import javax.persistence.Table;
 import javax.validation.constraints.Size;
+import javax.xml.bind.annotation.XmlElement;
+import javax.xml.bind.annotation.XmlRootElement;
+import javax.xml.bind.annotation.XmlType;
 
 import org.eclipse.persistence.annotations.CacheIndex;
 
 @Entity
 @Table(name="Document", schema="_s0545840__brokerDB")
 @PrimaryKeyJoinColumn(name = "documentIdentity")	
-@DiscriminatorValue("Document")					
+@DiscriminatorValue("Document")
 public class Document extends BaseEntity {
 	
 	@Column(name = "type", updatable=false, nullable=false, insertable=true)

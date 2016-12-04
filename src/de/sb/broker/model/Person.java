@@ -46,7 +46,7 @@ public class Person extends BaseEntity {
 	
 	@XmlElement
 	@Column(name = "alias", updatable=true, nullable=false, insertable=true)
-	@CacheIndex(updateable = true) //TODO changes cache to also index by alias //SELECT p from Person as p WHERE p.alias = :alias
+	@CacheIndex(updateable = true)
 	@Size(min = 1, max = 16)
 	private String alias;
 	
