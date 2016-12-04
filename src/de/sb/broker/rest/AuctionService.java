@@ -17,8 +17,11 @@ import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
+import javax.ws.rs.core.Response.Status;
 
 import de.sb.broker.model.Auction;
+import de.sb.broker.model.Person;
 
 @Path("auctions")
 public class AuctionService {
@@ -103,52 +106,35 @@ public class AuctionService {
 	 */
 	@PUT
 	@Produces(MediaType.APPLICATION_XML)
-	public void createAuction(@Valid Auction tmp){
+	public void setAuction(@Valid Auction tmp){
 		final EntityManager em = emf.createEntityManager();
 		try{
 			em.getTransaction().begin();
-			em.persist(tmp);
-			em.getTransaction().commit();
-		}finally{
-	        if(em.getTransaction().isActive()){
-	            System.out.println("Entity Manager Rollback");
-	            em.getTransaction().rollback();
-	        }   
-	        em.close();
-			RestHelper.update2ndLevelCache(em, tmp);
-		}
-	}
-	
-	/**
-	 * Creates or modifies an auction from the given template data. Note
-	 * that an auction may only be modified as long as it is not sealed (i.e. is open and still
-	 * without bids).
-	 */
-	@PUT
-	@Path("{identity}")
-	@Produces(MediaType.APPLICATION_XML)
-	public void updateAuction(@Valid Auction tmp, @PathParam("identity") final Long identity){
-		final EntityManager em = emf.createEntityManager();
-		try{
-			em.getTransaction().begin();
-			Auction a = em.find(Auction.class, identity);
-			if(!a.isClosed() && a.getBids().size() <= 0){ // update auction
-				if(tmp.getAskingPrice() != 0) a.setAskingPrice(tmp.getAskingPrice());
-				if(tmp.getClosureTimestamp() != 0) a.setClosureTimestamp(tmp.getClosureTimestamp());
-				if(tmp.getDescription() != null) a.setDescription(tmp.getDescription());
-				if(tmp.getSeller() != null) a.setSeller(tmp.getSeller());
-				if(tmp.getTitle() != null) a.setTitle(tmp.getTitle());
-				if(tmp.getUnitCount() != 0)a.setUnitCount(tmp.getUnitCount());
-				if(tmp.getVersion() != 0)a.setVersion(tmp.getVersion());
+			final boolean insertMode = tmp.getIdentity() == 0;
+			final Auction auction;
+			final Person seller = em.find(Person.class, tmp.getSeller().getIdentity());
+			if(insertMode)
+				auction = new Auction(seller);
+			else
+				auction = em.find(Auction.class, tmp.getIdentity());
+			if(!auction.isSealed()){
+				auction.setAskingPrice(tmp.getAskingPrice());
+				auction.setClosureTimestamp(tmp.getClosureTimestamp());
+				auction.setDescription(tmp.getDescription());
+				auction.setSeller(tmp.getSeller());
+				auction.setTitle(tmp.getTitle());
+				auction.setUnitCount(tmp.getUnitCount());
+				auction.setVersion(tmp.getVersion());
 			}
-			em.getTransaction().commit();
+		    if(insertMode)
+		    	em.persist(auction);	
+		    else
+		    	em.flush();
+		    em.getTransaction().commit();
 		}finally{
-	        if(em.getTransaction().isActive()){
-	            System.out.println("Entity Manager Rollback");
-	            em.getTransaction().rollback();
-	        }
-			RestHelper.update2ndLevelCache(em, tmp);
+	        if(em.getTransaction().isActive()) em.getTransaction().rollback();
 	        em.close();
+			RestHelper.update2ndLevelCache(em, tmp);
 		}
 	}
 	
@@ -160,20 +146,17 @@ public class AuctionService {
 	@GET
 	@Path("{identity}")
 	@Produces(MediaType.APPLICATION_XML)
-	public List<Auction> getAuctionIdentityXML(@PathParam("identity") final long id){
+	public Response getAuctionIdentityXML(@PathParam("identity") final long id){
 		final EntityManager em = emf.createEntityManager();
-		List<Auction> l;
 		try{			
-			TypedQuery<Auction> query = em
-					.createQuery("SELECT a FROM Auction a WHERE a.seller.identity = :id", Auction.class)
-					.setParameter("id", id);
-			l =  query.getResultList();
-		}catch(NoResultException e){
-			l = new ArrayList<Auction>();
+			Auction auction = em.find(Auction.class, id);
+			if(auction == null)
+				return Response.status(Status.NOT_FOUND).build();
+			else
+				return Response.ok(auction).build();
 		}finally{
 			if(em.getTransaction().isActive()) em.getTransaction().rollback();
 			em.close();
 		}
-		return l;
 	}
 }

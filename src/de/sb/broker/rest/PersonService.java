@@ -22,6 +22,7 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+import javax.ws.rs.core.Response.Status;
 
 import de.sb.broker.model.Auction;
 import de.sb.broker.model.Bid;
@@ -112,12 +113,14 @@ public class PersonService {
 	@GET
 	@Path("{identity}")
 	@Produces({MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML})
-	public Person getPeopleIdentity(@PathParam("identity") final long id){
+	public Response getPeopleIdentity(@PathParam("identity") final long id){
 		final EntityManager em = emf.createEntityManager();
 		try{
-
-			Person p = em.find(Person.class, id); // TODO Check for null
-			return p;
+			Person p = em.find(Person.class, id);
+			if(p == null)
+				return Response.status(Status.NOT_FOUND).build();
+			else
+				return Response.ok(p).build();
 		}finally{
 			if(em.getTransaction().isActive()) em.getTransaction().rollback();
 			em.close();
@@ -136,14 +139,15 @@ public class PersonService {
 	public List<Auction> getPeopleIdentityAuctions(@PathParam("identity") final long id){
 		final EntityManager em = emf.createEntityManager();		
 		try{
-			List<Auction> l = new ArrayList<Auction>();
+			List<Auction> auctions = new ArrayList<Auction>();
 			Person p = em.find(Person.class, id);
-			l.addAll(p.getAuctions());
+			auctions.addAll(p.getAuctions());
 			for (Bid b : p.getBids()) {
-				l.add(b.getAuction());
+				auctions.add(b.getAuction());
 			}
-			//TODO sort
-			return l;
+			Comparator<Auction> comparator = Comparator.comparing(Auction::getClosureTimestamp).thenComparing(Auction::getIdentity);
+			auctions.sort(comparator);
+			return auctions;
 		} finally {
 			if(em.getTransaction().isActive()) em.getTransaction().rollback();
 			em.close();
@@ -161,13 +165,14 @@ public class PersonService {
 	public List<Bid> getPeopleIdentityBids(@PathParam("identity") final long id){
 		final EntityManager em = emf.createEntityManager();
 		List<Bid> l = new ArrayList<Bid>();
-		// TODO see above
 		try{
-			long ts = System.currentTimeMillis();
-			TypedQuery<Bid> query = em.createQuery("SELECT b FROM Bid b JOIN b.auction a WHERE a.closureTimestamp < :ts AND b.bidder.identity = :id", Bid.class)
-					.setParameter("id", id)
-					.setParameter("ts", ts);
-			l =  query.getResultList();
+			List<Bid> bids = new ArrayList<Bid>();
+			Person p = em.find(Person.class, id);
+			for(Bid b : p.getBids()){
+				if(b.getAuction().isClosed())
+					bids.add(b);
+			}
+			return bids;
 		}catch(NoResultException e){
 			l = new ArrayList<Bid>();
 		}finally{
@@ -187,29 +192,26 @@ public class PersonService {
      */
     @PUT
     @Consumes(MediaType.APPLICATION_JSON)
-    public void createPerson(@Valid Person tmp, @HeaderParam("Set-password") final String pw){ //TODO rename set
+    public void setPerson(@Valid Person tmp, @HeaderParam("Set-password") final String pw){ 
         final EntityManager em = emf.createEntityManager();
         try{
             em.getTransaction().begin();
-            final boolean insertMode = tmp.getIdentity() == 0; // if 0 create new
+            final boolean insertMode = tmp.getIdentity() == 0;
             final Person person;
-            if(insertMode) {
+            if(insertMode)
             	person = new Person();
-            } else {
+            else
             	person = em.find(Person.class, tmp.getIdentity());
-      
-            }
-            //TODO set person.X = tmp.X
-
-            // set password hash
-            // example hash 2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824
-            // meaning hello
-            tmp.setPasswordHash(Person.passwordHash(pw));
-            if(insertMode) {
+            person.setAlias(tmp.getAlias());
+            person.setGroup(tmp.getGroup());
+            person.setName(tmp.getName());
+            person.setAddress(tmp.getAddress());
+            person.setContact(tmp.getContact());
+            person.setPasswordHash(Person.passwordHash(pw));
+            if(insertMode)
             	em.persist(person);	
-            } else {
+            else
             	em.flush();
-            }
             em.getTransaction().commit();
         } finally {
             if(em.getTransaction().isActive()){
@@ -219,63 +221,22 @@ public class PersonService {
         }
     }
     
-	/**
-	 * Creates a new person if the given Person template's identity is zero, or
-	 * otherwise updates the corresponding person with template data. Optionally, a new
-	 * password may be set using the header field â€œSet-passwordâ€�. Returns the affected
-	 * person's identity.
-     * @param p
-     * @param pw
-     
-    @PUT
-	@Path("{identity}")
-    @Consumes(MediaType.APPLICATION_JSON)
-    public void updatePerson(@Valid Person tmp,
-    		@HeaderParam("Set-password") final String pw,
-    		@PathParam("identity") final Long personIdentity) {
-        final EntityManager em = emf.createEntityManager();
-        try{
-    		em.getTransaction().begin();
-    		Person p = em.find(Person.class, personIdentity);
-    		if(tmp.getAlias() != null) p.setAlias(tmp.getAlias());
-    		if(tmp.getGroup() != null) p.setGroup(tmp.getGroup());
-    		if(tmp.getName() != null) p.setName(tmp.getName());
-    		if(tmp.getAddress() != null) p.setAddress(tmp.getAddress());
-    		if(tmp.getContact() != null) p.setContact(tmp.getContact());
-    		if(pw != "") p.setPasswordHash(Person.passwordHash(pw));
-    		em.getTransaction().commit();
-        }finally{
-            if(em.getTransaction().isActive()){
-                System.out.println("Entity Manager Rollback");
-                em.getTransaction().rollback();
-            }   
-			RestHelper.update2ndLevelCache(em, tmp);
-            em.close();
-        }
-    }
-	*/
-    
-	/* Services for avatar */
 	@GET
 	@Path("{identity}/avatar")
 	@Produces(MediaType.WILDCARD)
-	public Response getAvatar(@PathParam("identity") final long personIdentity) throws Exception {
-		// Select from Database
+	public Response getAvatar(@PathParam("identity") final long id){
 		final EntityManager em = emf.createEntityManager();
-		Document d = null;
-		Person p = null;
 		try{			
-			// with CriteriaQuery
-			//mit em lösen TODO
-			p = em.find(Person.class, personIdentity);
-			d = p.getAvatar();
-			if(d == null) return Response.noContent().build();
+			Person p = em.find(Person.class, id);
+			Document d = p.getAvatar();
+			if(d == null) 
+				return Response.status(Status.NOT_FOUND).build();
+			else
+				return Response.ok(d.getContent(), d.getType()).build();
 		} finally{
 			if(em.getTransaction().isActive()) em.getTransaction().rollback();
 			em.close();
 		}
-	     
-		return Response.ok(d.getContent(), d.getType()).build();
     }
 
 	@PUT
