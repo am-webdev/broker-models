@@ -10,6 +10,7 @@ import javax.persistence.NoResultException;
 import javax.persistence.Persistence;
 import javax.persistence.TypedQuery;
 import javax.validation.Valid;
+import javax.ws.rs.Consumes;
 import javax.ws.rs.GET;
 import javax.ws.rs.PUT;
 import javax.ws.rs.Path;
@@ -105,8 +106,9 @@ public class AuctionService {
 	 * without bids).
 	 */
 	@PUT
-	@Produces(MediaType.APPLICATION_XML)
-	public void setAuction(@Valid Auction tmp){
+	@Consumes(MediaType.APPLICATION_XML)
+	@Produces(MediaType.TEXT_PLAIN)
+	public long setAuction(@Valid Auction tmp){
 		final EntityManager em = emf.createEntityManager();
 		try{
 			em.getTransaction().begin();
@@ -131,6 +133,7 @@ public class AuctionService {
 		    else
 		    	em.flush();
 		    em.getTransaction().commit();
+		    return auction.getIdentity();
 		}finally{
 	        if(em.getTransaction().isActive()) em.getTransaction().rollback();
 	        em.close();

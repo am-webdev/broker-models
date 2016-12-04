@@ -192,7 +192,8 @@ public class PersonService {
      */
     @PUT
     @Consumes(MediaType.APPLICATION_JSON)
-    public void setPerson(@Valid Person tmp, @HeaderParam("Set-password") final String pw){ 
+    @Produces(MediaType.TEXT_PLAIN)
+    public long setPerson(@Valid Person tmp, @HeaderParam("Set-password") final String pw){ 
         final EntityManager em = emf.createEntityManager();
         try{
             em.getTransaction().begin();
@@ -213,6 +214,7 @@ public class PersonService {
             else
             	em.flush();
             em.getTransaction().commit();
+            return person.getIdentity();
         } finally {
             if(em.getTransaction().isActive()){
                 em.getTransaction().rollback();
@@ -242,7 +244,7 @@ public class PersonService {
 	@PUT
 	@Path("{identity}/avatar")
 	@Consumes(MediaType.WILDCARD)
-	@Produces(MediaType.TEXT_PLAIN) // TODO return new id to all Put / Posts 
+	@Produces(MediaType.TEXT_PLAIN)
 	public long setAvatar(
 			@PathParam("identity") final long personIdentity,
 			byte[] content,
