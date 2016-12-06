@@ -1,16 +1,12 @@
 package de.sb.broker.rest;
 
-import java.util.ArrayList;
 import java.util.List;
 
 import javax.persistence.EntityManager;
-import javax.persistence.EntityManagerFactory;
 import javax.persistence.NoResultException;
-import javax.persistence.Persistence;
 import javax.persistence.RollbackException;
 import javax.persistence.TypedQuery;
 import javax.validation.Valid;
-import javax.validation.constraints.NotNull;
 import javax.validation.ValidationException;
 import javax.validation.constraints.NotNull;
 import javax.ws.rs.ClientErrorException;
@@ -26,7 +22,6 @@ import javax.ws.rs.core.MediaType;
 
 import de.sb.broker.model.Auction;
 import de.sb.broker.model.Bid;
-import de.sb.broker.model.Document;
 import de.sb.broker.model.Person;
 
 @Path("auctions")
@@ -40,7 +35,7 @@ public class AuctionService {
 	@GET
 	@Produces({MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML})
 	public List<Auction> getAuctions(
-		@NotNull @HeaderParam ("Authorization") String authentication),
+		@NotNull @HeaderParam ("Authorization") String authentication,
 		@QueryParam("closed") final boolean isClosed){
 		final EntityManager em = LifeCycleProvider.brokerManager();
 		List<Auction> l;
@@ -66,7 +61,7 @@ public class AuctionService {
 	}
 
 	public void createAuction(
-		@NotNull @HeaderParam ("Authorization") String authentication
+		@NotNull @HeaderParam ("Authorization") String authentication,
 		@Valid Auction tmp){
 		final EntityManager em = LifeCycleProvider.brokerManager();
 		Person requester = LifeCycleProvider.authenticate(authentication);
@@ -102,7 +97,7 @@ public class AuctionService {
 	public void updateAuction(
 		@NotNull @HeaderParam ("Authorization") String authentication,
 		@Valid Auction tmp,
-		@PathParam("identity"){
+		@PathParam("identity") final long identity){
 		final EntityManager em = LifeCycleProvider.brokerManager();
 		Person requester = LifeCycleProvider.authenticate(authentication);
 		try{
