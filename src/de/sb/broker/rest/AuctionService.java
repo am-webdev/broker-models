@@ -10,6 +10,7 @@ import javax.validation.Valid;
 import javax.validation.ValidationException;
 import javax.validation.constraints.NotNull;
 import javax.ws.rs.ClientErrorException;
+import javax.ws.rs.Consumes;
 import javax.ws.rs.GET;
 import javax.ws.rs.HeaderParam;
 import javax.ws.rs.POST;
@@ -40,7 +41,6 @@ public class AuctionService {
 		final EntityManager em = LifeCycleProvider.brokerManager();
 		List<Auction> l;
 		try{
-			em.getTransaction().begin();
 			String queryString = "SELECT a FROM Auction a";
 			if (isClosed) {
 				queryString += " WHERE a.closureTimestamp < "+ System.currentTimeMillis();
@@ -67,7 +67,6 @@ public class AuctionService {
 		Person requester = LifeCycleProvider.authenticate(authentication);
 		try{
 			tmp.setSeller(requester);
-			em.getTransaction().begin();
 			em.persist(tmp);
 			em.getTransaction().commit();
 		} catch(ValidationException e) {
@@ -101,7 +100,6 @@ public class AuctionService {
 		final EntityManager em = LifeCycleProvider.brokerManager();
 		Person requester = LifeCycleProvider.authenticate(authentication);
 		try{
-			em.getTransaction().begin();
 			Auction a = em.find(Auction.class, identity);
 			if(!a.isClosed() && a.getBids().size() <= 0){ // update auction
 				if(tmp.getAskingPrice() != 0) a.setAskingPrice(tmp.getAskingPrice());
@@ -147,7 +145,6 @@ public class AuctionService {
 		Person requester = LifeCycleProvider.authenticate(authentication);
 		List<Auction> l;
 		try{
-			em.getTransaction().begin();
 			TypedQuery<Auction> query = em
 					.createQuery("SELECT a FROM Auction a WHERE a.identity = :id", Auction.class)
 					.setParameter("id", id);
@@ -210,6 +207,7 @@ public class AuctionService {
 		Person requester = LifeCycleProvider.authenticate(authentication);
 		Bid b;
 		try{			
+			//TODO use 2nd level Cache instead of useless bad angry stupid queries
 			TypedQuery<Bid> query = em
 					.createQuery("SELECT a FROM Auction a RIGHT JOIN a.bids b WHERE a.seller.identity = :id AND b.bidder.identity = ", Bid.class)
 					.setParameter("id", id)

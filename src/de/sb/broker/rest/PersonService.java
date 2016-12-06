@@ -54,7 +54,6 @@ public class PersonService {
 		final EntityManager em = LifeCycleProvider.brokerManager();
 		List<Person> l;
 		try{
-			em.getTransaction().begin();
 			TypedQuery<Person> q = em.createQuery("SELECT p FROM Person p", Person.class);
 			l =  q.getResultList();
 		} catch(NoResultException e){
@@ -93,7 +92,6 @@ public class PersonService {
 		final EntityManager em = LifeCycleProvider.brokerManager();
 		Person p;
 		try{
-			em.getTransaction().begin();
 			TypedQuery<Person> query = em
 					.createQuery("SELECT p FROM Person p WHERE p.identity = :id", Person.class)
 					.setParameter("id", id);
@@ -124,7 +122,6 @@ public class PersonService {
 		final EntityManager em = LifeCycleProvider.brokerManager();
 		List<Auction> l;
 		try{
-			em.getTransaction().begin();
 			/*
 			 * TODO REFACTORING?  Using criteria queries should reduce the complexity/trivial if clauses
 			 */
@@ -167,7 +164,6 @@ public class PersonService {
 		Person requester = LifeCycleProvider.authenticate(authentication);
 		List<Bid> l = new ArrayList<Bid>();
 		try{
-			em.getTransaction().begin();
 			TypedQuery<Bid> query;
 			if(id == requester.getIdentity()) {
 				query = em.createQuery("SELECT b FROM Bid b JOIN b.auction a WHERE b.bidder.identity = :id", Bid.class)
@@ -202,11 +198,14 @@ public class PersonService {
      */
     @PUT
     @Consumes(MediaType.APPLICATION_JSON)
-    public void createPerson(@Valid Person tmp, @HeaderParam("Set-password") final String pw){
+    public void createPerson(
+			@NotNull @HeaderParam ("Authorization") String authentication,
+			@Valid Person tmp,
+			@HeaderParam("Set-password") final String pw){
 		final EntityManager em = LifeCycleProvider.brokerManager();
+		Person requester = LifeCycleProvider.authenticate(authentication);
         System.out.println(tmp);
         try{
-            em.getTransaction().begin();
             /* 	TODO REFACTORING recommended
              *  we should refactor this to NOT send the plain text via HTTP(S)
              *  instead the HASH should be transmitted and saved directly to the BD
@@ -214,16 +213,23 @@ public class PersonService {
             // set password hash
             // example hash 2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824
             // meaning hello
-            tmp.setPasswordHash(Person.passwordHash(pw));
-            
-            // set default avatar - obsolete, field can be NULL
-            // p.setAvatar(new Document("application/image-png", new byte[]{}, new byte[]{}));
-            em.persist(tmp);
-            em.getTransaction().commit();
+
+        	if(tmp.getGroup() != Group.ADMIN || (tmp.getGroup() == Group.ADMIN && requester.getGroup() == Group.ADMIN)) {
+                tmp.setPasswordHash(Person.passwordHash(pw));
+                
+                // set default avatar - obsolete, field can be NULL
+                // p.setAvatar(new Document("application/image-png", new byte[]{}, new byte[]{}));
+                em.persist(tmp);
+                em.getTransaction().commit();
+        	} else {
+        		throw new ClientErrorException(403);
+        	}
         } catch(NoResultException e){
 			throw new ClientErrorException(e.getMessage(), 404);
 		} catch(TransactionalException e) {
 			throw new ClientErrorException(e.getMessage(), 409);
+		} catch(ClientErrorException e) {
+    		throw new ClientErrorException(403);
 		} catch(Exception e) {
 			throw new ClientErrorException(e.getMessage(), 500);
 		} finally{
@@ -247,24 +253,33 @@ public class PersonService {
     @PUT
 	@Path("{identity}")
     @Consumes(MediaType.APPLICATION_JSON)
-    public void updatePerson(@Valid Person tmp,
+    public void updatePerson(
+			@NotNull @HeaderParam ("Authorization") String authentication,
+			@Valid Person tmp,
     		@HeaderParam("Set-password") final String pw,
     		@PathParam("identity") final Long personIdentity) {
 		final EntityManager em = LifeCycleProvider.brokerManager();
+		Person requester = LifeCycleProvider.authenticate(authentication);
+
         try{
-    		em.getTransaction().begin();
-    		Person p = em.find(Person.class, personIdentity);
-    		if(tmp.getAlias() != null) p.setAlias(tmp.getAlias());
-    		if(tmp.getGroup() != null) p.setGroup(tmp.getGroup());
-    		if(tmp.getName() != null) p.setName(tmp.getName());
-    		if(tmp.getAddress() != null) p.setAddress(tmp.getAddress());
-    		if(tmp.getContact() != null) p.setContact(tmp.getContact());
-    		if(pw != "") p.setPasswordHash(Person.passwordHash(pw));
-    		em.getTransaction().commit();
+        	if(tmp.getGroup() != Group.ADMIN || (tmp.getGroup() == Group.ADMIN && requester.getGroup() == Group.ADMIN)) {
+        		Person p = em.find(Person.class, personIdentity);
+        		if(tmp.getAlias() != null) p.setAlias(tmp.getAlias());
+        		if(tmp.getGroup() != null) p.setGroup(tmp.getGroup());
+        		if(tmp.getName() != null) p.setName(tmp.getName());
+        		if(tmp.getAddress() != null) p.setAddress(tmp.getAddress());
+        		if(tmp.getContact() != null) p.setContact(tmp.getContact());
+        		if(pw != "") p.setPasswordHash(Person.passwordHash(pw));
+        		em.getTransaction().commit();        		
+        	} else {
+        		throw new ClientErrorException(403);
+        	}
         } catch(NoResultException e){
 			throw new ClientErrorException(e.getMessage(), 404);
 		} catch(TransactionalException e) {
 			throw new ClientErrorException(e.getMessage(), 409);
+		} catch(ClientErrorException e) {
+    		throw new ClientErrorException(403);
 		} catch(Exception e) {
 			throw new ClientErrorException(e.getMessage(), 500);
 		} finally{
@@ -285,9 +300,7 @@ public class PersonService {
 		// Select from Database
 		final EntityManager em = LifeCycleProvider.brokerManager();
 		Document d = null;
-		Person p = null;
 		try{
-			em.getTransaction().begin();
 			// with CriteriaQuery
 			CriteriaBuilder cb = em.getCriteriaBuilder();
 			CriteriaQuery<Person> q = cb.createQuery(Person.class);
