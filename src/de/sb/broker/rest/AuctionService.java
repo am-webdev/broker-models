@@ -69,7 +69,7 @@ public class AuctionService {
 					+ "(:upperClosureTimestamp IS NULL OR a.closureTimestamp >= :upperClosureTimestamp) AND"
 					+ "(:lowerClosureTimestamp IS NULL OR a.closureTimestamp <= :lowerClosureTimestamp) AND"
 					+ "(:description IS NULL OR a.description = :description)"
-					//TODO: cant access isClosed
+					+ "(:closed IS NULL OR a.closureTimestamp < :currentDate)"
 					, Long.class);
 			q.setParameter("lowerVersion", lowerVersion);
 			q.setParameter("upperVersion", upperVersion);
@@ -83,6 +83,7 @@ public class AuctionService {
 			q.setParameter("upperClosureTimestamp", upperClosureTimestamp);
 			q.setParameter("lowerClosureTimestamp", lowerClosureTimestamp);
 			q.setParameter("description", description);
+			q.setParameter("currenteDate", System.currentTimeMillis());
 			
 			l =  q.getResultList();
 			auctions = new ArrayList<Auction>();
