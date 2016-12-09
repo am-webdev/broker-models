@@ -109,7 +109,12 @@ public class AuctionService {
 			em.getTransaction().begin();
 		}
 	}
-
+	
+	/**
+	 * Creates or modifies an auction from the given template data. Note
+	 * that an auction may only be modified as long as it is not sealed (i.e. is open and still
+	 * without bids).
+	 */
 	@PUT
 	@Consumes(MediaType.APPLICATION_XML)
 	@Produces(MediaType.TEXT_PLAIN)
@@ -227,6 +232,7 @@ public class AuctionService {
 		Person requester = LifeCycleProvider.authenticate(authentication);
 		Bid b;
 		try{			
+			//TODO use 2nd level Cache instead of useless bad angry stupid queries
 			TypedQuery<Bid> query = em
 					.createQuery("SELECT a FROM Auction a RIGHT JOIN a.bids b WHERE a.seller.identity = :id AND b.bidder.identity = ", Bid.class)
 					.setParameter("id", id)

@@ -95,7 +95,6 @@ public class PersonService {
 			q.setParameter("street", street);
 			q.setParameter("email", email);
 			q.setParameter("phone", phone);
-			
 			l =  q.getResultList();
 			people = new ArrayList<Person>();
 			for (Long id : l) {
@@ -261,6 +260,8 @@ public class PersonService {
 			throw new ClientErrorException(e.getMessage(), 404);
 		} catch(TransactionalException e) {
 			throw new ClientErrorException(e.getMessage(), 409);
+		} catch(ClientErrorException e) {
+    		throw new ClientErrorException(403);
 		} catch(Exception e) {
 			throw new ClientErrorException(e.getMessage(), 500);
 		} finally {

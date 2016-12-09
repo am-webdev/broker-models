@@ -9,6 +9,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.persistence.EntityManager;
 import javax.persistence.EntityManagerFactory;
+import javax.persistence.NoResultException;
 import javax.persistence.Persistence;
 import javax.persistence.PersistenceException;
 import javax.persistence.TypedQuery;
@@ -104,19 +105,19 @@ public class LifeCycleProvider implements ContainerRequestFilter, ContainerRespo
 	 * @see HttpAuthenticationCodec#decode(String)
 	 */
 	static public Person authenticate (final String authentication) throws ClientErrorException, NotAuthorizedException, PersistenceException, IllegalStateException {
-		if (authentication == null) throw new NotAuthorizedException("Basic");
+		if (authentication == null) throw new NotAuthorizedException(401, "Basic");
 
 		final Map<String,String> credentials;
 		try {
 			credentials = HttpAuthenticationCodec.decode(authentication);
 		} catch (final IllegalArgumentException exception) {
-			throw new ClientErrorException(BAD_REQUEST);
+			throw new NotAuthorizedException(401, "Basic");
 		}
 
 		final String mode = credentials.get("mode");
 		final String username = credentials.get("username");
 		final String password = credentials.get("password");
-		if (!"basic".equals(mode) | username == null | password == null) throw new NotAuthorizedException("Basic");
+		if (!"basic".equals(mode) | username == null | password == null) throw new NotAuthorizedException(401, "Basic");
 
 		// TODO: Replace with implementation of JPA authentication by calculating the password hash from the given
 		// password, creating a query using the constant below, and returning the person if it matches the password hash.
@@ -130,12 +131,12 @@ public class LifeCycleProvider implements ContainerRequestFilter, ContainerRespo
 		TypedQuery<Person> query = em.createQuery(PERSON_BY_ALIAS, Person.class);
 		query.setParameter("alias", username);
 		query.setParameter("passwordHash", passwordHash);
-		Person user = em.find(Person.class, query.getSingleResult());
-		if (user == null) 
-			throw new NotAuthorizedException("Basic");
-		return user;
-		
-		//throw new AssertionError(PERSON_BY_ALIAS);
+		try {
+
+			return em.find(Person.class, query.getSingleResult());	
+		} catch (NoResultException e) {
+			throw new ClientErrorException(401);
+		}
 	}
 
 
