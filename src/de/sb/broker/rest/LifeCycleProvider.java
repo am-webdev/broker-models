@@ -9,8 +9,10 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.persistence.EntityManager;
 import javax.persistence.EntityManagerFactory;
+import javax.persistence.NoResultException;
 import javax.persistence.Persistence;
 import javax.persistence.PersistenceException;
+import javax.persistence.TypedQuery;
 import javax.ws.rs.ClientErrorException;
 import javax.ws.rs.NotAuthorizedException;
 import javax.ws.rs.WebApplicationException;
@@ -55,7 +57,8 @@ public class LifeCycleProvider implements ContainerRequestFilter, ContainerRespo
 	static private volatile EntityManagerFactory BROKER_FACTORY;
 	static private final ThreadLocal<EntityManager> BROKER_THREAD_LOCAL = new ThreadLocal<>();
 	static private final Object MONITOR = new Object();
-	static private final String PERSON_BY_ALIAS = "select p from Person as p where p.alias = :alias";
+	static private final String PERSON_BY_ALIAS = "SELECT p.identity FROM Person AS p WHERE "
+			+ "p.alias = :alias AND p.passwordHash = :passwordHash";
 
 
 	/**
@@ -102,26 +105,38 @@ public class LifeCycleProvider implements ContainerRequestFilter, ContainerRespo
 	 * @see HttpAuthenticationCodec#decode(String)
 	 */
 	static public Person authenticate (final String authentication) throws ClientErrorException, NotAuthorizedException, PersistenceException, IllegalStateException {
-		if (authentication == null) throw new NotAuthorizedException("Basic");
+		if (authentication == null) throw new NotAuthorizedException(401, "Basic");
 
 		final Map<String,String> credentials;
 		try {
 			credentials = HttpAuthenticationCodec.decode(authentication);
 		} catch (final IllegalArgumentException exception) {
-			throw new ClientErrorException(BAD_REQUEST);
+			throw new NotAuthorizedException(401, "Basic");
 		}
 
 		final String mode = credentials.get("mode");
 		final String username = credentials.get("username");
 		final String password = credentials.get("password");
-		if (!"basic".equals(mode) | username == null | password == null) throw new NotAuthorizedException("Basic");
+		if (!"basic".equals(mode) | username == null | password == null) throw new NotAuthorizedException(401, "Basic");
 
 		// TODO: Replace with implementation of JPA authentication by calculating the password hash from the given
 		// password, creating a query using the constant below, and returning the person if it matches the password hash.
 		// If there is none, or if it fails the password hash check, then throw NotAuthorizedException("Basic"). Note
 		// that this exception type is a specialized Subclass of ClientErrorException that is capable of storing a
 		// challenge, in this case for Basic Authorization. 
-		throw new AssertionError(PERSON_BY_ALIAS);
+		
+		final byte[] passwordHash = Person.passwordHash(password);
+		
+		final EntityManager em = brokerFactory().createEntityManager();
+		TypedQuery<Person> query = em.createQuery(PERSON_BY_ALIAS, Person.class);
+		query.setParameter("alias", username);
+		query.setParameter("passwordHash", passwordHash);
+		try {
+
+			return em.find(Person.class, query.getSingleResult());	
+		} catch (NoResultException e) {
+			throw new ClientErrorException(401);
+		}
 	}
 
 
@@ -150,7 +165,9 @@ public class LifeCycleProvider implements ContainerRequestFilter, ContainerRespo
 			? ((WebApplicationException) exception).getResponse()
 			: Response.status(INTERNAL_SERVER_ERROR).build();
 
-		Logger.getGlobal().log(logLevel(response.getStatusInfo()), exception.getMessage(), exception);
+		if (response.getStatus() >= INTERNAL_SERVER_ERROR.getStatusCode()) {
+			Logger.getGlobal().log(logLevel(response.getStatusInfo()), exception.getMessage(), exception);
+		}
 		return response;
 	}
 

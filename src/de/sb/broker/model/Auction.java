@@ -3,6 +3,7 @@ package de.sb.broker.model;
 import java.util.HashSet;
 import java.util.Set;
 
+import javax.enterprise.util.AnnotationLiteral;
 import javax.persistence.CascadeType;
 import javax.persistence.Column;
 import javax.persistence.DiscriminatorValue;
@@ -32,6 +33,18 @@ import de.sb.java.validation.Inequal;
 @XmlRootElement
 public class Auction extends BaseEntity {
 	
+	static public @interface XmlSellerAsEntityFilter {
+		static final class Literal extends AnnotationLiteral<XmlSellerAsEntityFilter> implements XmlSellerAsEntityFilter {}
+	}
+	
+	static public @interface XmlSellerAsReferenceFilter {
+		static final class Literal extends AnnotationLiteral<XmlSellerAsReferenceFilter> implements XmlSellerAsReferenceFilter {}
+	}
+	
+	static public @interface XmlBidsAsEntityFilter {
+		static final class Literal extends AnnotationLiteral<XmlBidsAsEntityFilter> implements XmlBidsAsEntityFilter {}
+	}
+
 	@XmlElement
 	@Column(name = "title", updatable=true, nullable=false, insertable=true)
 	@Size(min = 1, max = 255)
@@ -76,34 +89,7 @@ public class Auction extends BaseEntity {
 		this.description = "";
 		this.bids = new HashSet<Bid>();
 	}
-	
-	public Person getSeller() {
-		return this.seller;
-	}
-	
-	public long getSellerReference() {
-		return this.seller == null ? 0: this.seller.getIdentity();
-	}
-	
-	public Bid getBid(Person bidder) {
-		Bid rtn = null;
-		for (Bid b : bids) {
-		    if(b.getBidder() == bidder) {
-		    	return b;
-		    }
-		}
-		return rtn;
-	}
-	
-	@XmlElement
-	public boolean isClosed() {
-		return (System.currentTimeMillis() > this.closureTimestamp);
-	}
-	
-	public boolean isSealed() {
-		return (this.bids.size() > 0 || isClosed());
-	}
-	
+
 	// Getter Setter
 
 	public String getTitle() {
@@ -145,12 +131,53 @@ public class Auction extends BaseEntity {
 	public void setDescription(String description) {
 		this.description = description;
 	}
-
+	
+	public Bid getBid(Person bidder) {
+		Bid rtn = null;
+		for (Bid b : bids) {
+		    if(b.getBidder() == bidder) {
+		    	return b;
+		    }
+		}
+		return rtn;
+	}
+	
+	@XmlElement
+	@XmlBidsAsEntityFilter
 	public Set<Bid> getBids() {
 		return this.bids;
+	}
+	
+	@XmlElement
+	@XmlSellerAsReferenceFilter
+	public long getSellerReference() {
+		return this.seller == null ? 0: this.seller.getIdentity();
+	}
+	
+	@XmlElement
+	@XmlSellerAsEntityFilter
+	public Person getSeller() {
+		return this.seller;
 	}
 
 	public void setSeller(Person seller) {
 		this.seller = seller;
 	}	
+	
+	@XmlElement
+	public boolean isClosed() {
+		return (System.currentTimeMillis() > this.closureTimestamp);
+	}
+	
+	@XmlElement
+	public boolean isSealed() {
+		return !isClosed() && !this.getBids().isEmpty();
+	}
+	
+// TODO: BUG FIX -> Unknown column 't1.auctionIdentity' in 'field list'
+// Reference Error!!!
+//	@XmlElement
+//	public boolean isSealed() {
+//		return (this.bids.size() > 0 || isClosed());
+//	}
 }
