@@ -62,7 +62,7 @@ public class AuctionService {
 		try{
 			List<Auction> auctions;
 			List<Long> l;
-			TypedQuery<Long> q = em.createQuery("SELECT a.identity FROM Auction a WHERE"
+			TypedQuery<Long> q = em.createQuery("SELECT a.identity FROM Auction a WHERE "
 					+ "(:lowerVersion IS NULL OR a.version >= :lowerVersion) AND"
 					+ "(:upperVersion IS NULL OR a.version <= :upperVersion) AND"
 					+ "(:upperCreationTimeStamp IS NULL OR a.creationTimeStamp >= :upperCreationTimeStamp) AND"
@@ -74,8 +74,8 @@ public class AuctionService {
 					+ "(:lowerAskingPrice IS NULL OR a.askingPrice <= :lowerAskingPrice) AND"
 					+ "(:upperClosureTimestamp IS NULL OR a.closureTimestamp >= :upperClosureTimestamp) AND"
 					+ "(:lowerClosureTimestamp IS NULL OR a.closureTimestamp <= :lowerClosureTimestamp) AND"
-					+ "(:description IS NULL OR a.description = :description)"
-					+ "(:closed IS NULL OR a.closureTimestamp < :currentDate)"
+					+ "(:description IS NULL OR a.description = :description) AND"
+					+ "(:closed IS NULL OR a.closureTimestamp <= :currentDate)"
 					, Long.class);
 			q.setParameter("lowerVersion", lowerVersion);
 			q.setParameter("upperVersion", upperVersion);
@@ -89,7 +89,8 @@ public class AuctionService {
 			q.setParameter("upperClosureTimestamp", upperClosureTimestamp);
 			q.setParameter("lowerClosureTimestamp", lowerClosureTimestamp);
 			q.setParameter("description", description);
-			q.setParameter("currenteDate", System.currentTimeMillis());
+			q.setParameter("currentDate", System.currentTimeMillis());
+			q.setParameter("closed", closed);
 			if (offset > 0) {
 				q.setFirstResult(offset);
 			}
