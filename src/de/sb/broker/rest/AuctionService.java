@@ -53,7 +53,9 @@ public class AuctionService {
 		@QueryParam("upperClosureTimestamp") final Long upperClosureTimestamp,
 		@QueryParam("lowerClosureTimestamp") final Long lowerClosureTimestamp,
 		@QueryParam("description") final String description,
-		@QueryParam("closed") final Boolean closed
+		@QueryParam("closed") final Boolean closed,
+		@QueryParam("offset") final int offset,
+		@QueryParam("length") final int length
 	){
 		final EntityManager em = LifeCycleProvider.brokerManager();
 
@@ -88,6 +90,12 @@ public class AuctionService {
 			q.setParameter("lowerClosureTimestamp", lowerClosureTimestamp);
 			q.setParameter("description", description);
 			q.setParameter("currenteDate", System.currentTimeMillis());
+			if (offset > 0) {
+				q.setFirstResult(offset);
+			}
+			if (length > 0) {
+				q.setMaxResults(length);
+			}
 			
 			l =  q.getResultList();
 			auctions = new ArrayList<Auction>();

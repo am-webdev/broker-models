@@ -61,7 +61,9 @@ public class PersonService {
 			@QueryParam("postCode") final String postCode,
 			@QueryParam("street") final String street,
 			@QueryParam("email") final String email,
-			@QueryParam("phone") final String phone
+			@QueryParam("phone") final String phone,
+			@QueryParam("offset") final int offset,
+			@QueryParam("length") final int length
 	){
 		final EntityManager em = LifeCycleProvider.brokerManager();
 		List<Long> l;
