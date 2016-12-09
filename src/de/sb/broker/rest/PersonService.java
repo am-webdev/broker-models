@@ -97,6 +97,12 @@ public class PersonService {
 			q.setParameter("street", street);
 			q.setParameter("email", email);
 			q.setParameter("phone", phone);
+			if (offset > 0) {
+				q.setFirstResult(offset);
+			}
+			if (length > 0) {
+				q.setMaxResults(length);
+			}
 			l =  q.getResultList();
 			people = new ArrayList<Person>();
 			for (Long id : l) {
