@@ -134,7 +134,6 @@ public class AuctionService {
 		final EntityManager em = LifeCycleProvider.brokerManager();
 		Person requester = LifeCycleProvider.authenticate(authentication);
 		try{
-			em.getTransaction().begin();
 			final boolean insertMode = tmp.getIdentity() == 0;
 			final Auction auction;
 			final Person seller = em.find(Person.class, tmp.getSeller().getIdentity());
@@ -236,43 +235,49 @@ public class AuctionService {
 	 */
 	@POST
 	@Path("{identity}/bid")
-	@Produces({MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML})
-	public void setRequestersBid(
+	@Produces(MediaType.TEXT_PLAIN)
+	@Consumes({MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML})
+	public long setRequestersBid(
+			@Valid Bid tmp,
 			@NotNull @HeaderParam ("Authorization") String authentication, 
-			@PathParam("identity") final long id,
-			@Valid final long price
+			@PathParam("identity") final long id
 	){
 		final EntityManager em = LifeCycleProvider.brokerManager();
 		Person requester = LifeCycleProvider.authenticate(authentication);
-		Bid b;
-		try{			
-			//TODO use 2nd level Cache instead of useless bad angry stupid queries
-			TypedQuery<Bid> query = em
-					.createQuery("SELECT a FROM Auction a RIGHT JOIN a.bids b WHERE a.seller.identity = :id AND b.bidder.identity = ", Bid.class)
-					.setParameter("id", id)
-					.setParameter("pid", requester.getIdentity());
-			b =  query.getSingleResult();
-			em.getTransaction().begin();
-			if(price == 0) {
-				em.remove(b);
-			} else {
-				b.setPrice(price);
-			}
-			em.getTransaction().commit();
-		}catch(NoResultException e){
-			try {
-				em.getTransaction().begin();
-				Auction a = em.find(Auction.class, id);
-				b = new Bid(a, requester);
-				b.setPrice(price);
-				em.persist(b);
-				em.getTransaction().commit();
-			} finally {
-				if(em.getTransaction().isActive()) em.getTransaction().rollback();
-			}
+		
+		try{
+	        final boolean insertMode = tmp.getIdentity() == 0;
+	        final Bid bid;
+	        Auction auction = em.find(Auction.class, id);
+	        if(insertMode) {
+	        	bid = new Bid(auction, requester);
+	        } else {
+	        	bid = em.find(Bid.class, tmp.getIdentity());
+	        }
+	        bid.setPrice(tmp.getPrice());
+	        bid.setVersion(tmp.getVersion());
+            if(tmp.getPrice() == 0){
+            	em.remove(bid);
+            }else if(insertMode)
+            	em.persist(bid);	
+            else
+            	em.flush();
+            em.getTransaction().commit();
+            return bid.getIdentity();
+	    } catch(NoResultException e){
+			throw new ClientErrorException(e.getMessage(), 404);
+		} catch(TransactionalException e) {
+			throw new ClientErrorException(e.getMessage(), 409);
+		} catch(ClientErrorException e) {
+			throw new ClientErrorException(403);
+		} catch(Exception e) {
+			throw new ClientErrorException(e.getMessage(), 500);
 		} finally {
-			if(em.getTransaction().isActive()) em.getTransaction().rollback();
+	        if(em.getTransaction().isActive()){
+	            em.getTransaction().rollback();
+	        }
 			em.getTransaction().begin();
-		}
+	        RestHelper.update2ndLevelCache(em, tmp);
+	    }
 	}
 }
