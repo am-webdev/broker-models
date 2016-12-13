@@ -77,7 +77,14 @@ public class Person extends BaseEntity {
 	@NotNull
 	private Contact contact;
 	
-	@ManyToOne(cascade = CascadeType.DETACH)
+	@ManyToOne(cascade = CascadeType.PERSIST) 
+	/*
+	 * TODO tests are failing on cascade = CascadeType.DETACH
+	 * Error on tests:
+	 * 	java.lang.IllegalStateException: 
+	 * 	During synchronization a new object was found through a relationship that was not marked cascade PERSIST:
+	 * 	de.sb.broker.model.Document@178270b2.
+	 */
 	@JoinColumn(name = "avatarReference")
 	private Document avatar;
 	
