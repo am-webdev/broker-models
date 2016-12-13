@@ -348,18 +348,15 @@ public class PersonService {
 		Document avatar = null;
 		try {
 			if(l == 0) { // creates new avatar
-				em.getTransaction().begin();
 				em.persist(uploadedDocument);
 				em.getTransaction().commit();
 			} else { // Update existing avatar
-				em.getTransaction().begin();
 				avatar = em.find(Document.class, l);		
 				if (uploadedDocument.getType().equals(avatar.getType())) {	// Check of Mime type needs to be updated
 					em.getTransaction().begin();
 					avatar.setVersion(avatar.getVersion());
 					avatar.setType(uploadedDocument.getType());
 					em.getTransaction().commit();
-					em.getTransaction().begin();
 					System.out.println("saved updated avatar within db: " + uploadedDocument.toString());
 				} else {
 					System.out.println("Nothing to do in here");
@@ -389,7 +386,6 @@ public class PersonService {
 		 */
 		if(l == 0) {
 			try {
-				em.getTransaction().begin();
 				Person person = em.find(Person.class, personIdentity);
 				if (uploadedDocument.getContent().length != 0) {
 					person.setAvatar(avatar);
@@ -408,7 +404,7 @@ public class PersonService {
 		            System.out.println("Entity Manager Rollback");
 		            em.getTransaction().rollback();
 		        }
-		        em.close();
+				em.getTransaction().begin();
 			}	
 		}
 		return l;

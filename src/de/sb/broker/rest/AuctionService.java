@@ -8,6 +8,7 @@ import javax.persistence.EntityManager;
 import javax.persistence.NoResultException;
 import javax.persistence.RollbackException;
 import javax.persistence.TypedQuery;
+import javax.transaction.TransactionalException;
 import javax.validation.Valid;
 import javax.validation.ValidationException;
 import javax.validation.constraints.NotNull;
@@ -207,20 +208,24 @@ public class AuctionService {
 			@PathParam("identity") final long id){
 		final EntityManager em = LifeCycleProvider.brokerManager();
 		Person requester = LifeCycleProvider.authenticate(authentication);
-		Bid b;
-		try{			
-			TypedQuery<Bid> query = em
-					.createQuery("SELECT a FROM Auction a RIGHT JOIN a.bids b WHERE a.seller.identity = :id AND b.bidder.identity = ", Bid.class)
-					.setParameter("id", id)
-					.setParameter("pid", requester.getIdentity());
-			b =  query.getSingleResult();
-		}catch(NoResultException e){
-			b = null;
-		}finally{
+		try{
+			Bid bid = null;
+			Auction a = em.find(Auction.class, id);
+			for(Bid b : a.getBids()){
+				if(b.getBidder().getIdentity() == requester.getIdentity())
+					bid = b;
+			}
+			return bid;
+		} catch(NoResultException e){
+			throw new ClientErrorException(e.getMessage(), 404);
+		} catch(TransactionalException e) {
+			throw new ClientErrorException(e.getMessage(), 409);
+		} catch(Exception e) {
+			throw new ClientErrorException(e.getMessage(), 500);
+		} finally{
 			if(em.getTransaction().isActive()) em.getTransaction().rollback();
 			em.getTransaction().begin();
 		}
-		return b;
 	}
 	
 	/**
