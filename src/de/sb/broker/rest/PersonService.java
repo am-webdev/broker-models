@@ -239,7 +239,7 @@ public class PersonService {
      * @param pw
      */
     @PUT
-    @Consumes(MediaType.APPLICATION_JSON)
+    @Consumes({MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML})
     @Produces(MediaType.TEXT_PLAIN)
     public long setPerson(@Valid Person tmp, @HeaderParam("Set-password") final String pw){ 
 	final EntityManager em = LifeCycleProvider.brokerManager();
