@@ -8,6 +8,7 @@ import javax.persistence.EntityManager;
 import javax.persistence.NoResultException;
 import javax.persistence.RollbackException;
 import javax.persistence.TypedQuery;
+import javax.transaction.TransactionalException;
 import javax.validation.Valid;
 import javax.validation.ValidationException;
 import javax.validation.constraints.NotNull;
@@ -125,7 +126,7 @@ public class AuctionService {
 	 * without bids).
 	 */
 	@PUT
-	@Consumes(MediaType.APPLICATION_XML)
+	@Consumes({MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML})
 	@Produces(MediaType.TEXT_PLAIN)
 	public long setAuction(
 			@NotNull @HeaderParam ("Authorization") String authentication,
@@ -177,7 +178,7 @@ public class AuctionService {
 	 */
 	@GET
 	@Path("{identity}")
-	@Produces(MediaType.APPLICATION_XML)
+	@Produces({MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML})
 	@Auction.XmlSellerAsReferenceFilter
 	public Auction getAuctionIdentityXML(@PathParam("identity") final long id){
 		final EntityManager em = LifeCycleProvider.brokerManager();
@@ -201,26 +202,30 @@ public class AuctionService {
 	 */
 	@GET
 	@Path("{identity}/bid")
-	@Produces(MediaType.APPLICATION_XML)
+	@Produces({MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML})
 	public Bid getBidForAuction(
 			@NotNull @HeaderParam ("Authorization") String authentication, 
 			@PathParam("identity") final long id){
 		final EntityManager em = LifeCycleProvider.brokerManager();
 		Person requester = LifeCycleProvider.authenticate(authentication);
-		Bid b;
-		try{			
-			TypedQuery<Bid> query = em
-					.createQuery("SELECT a FROM Auction a RIGHT JOIN a.bids b WHERE a.seller.identity = :id AND b.bidder.identity = ", Bid.class)
-					.setParameter("id", id)
-					.setParameter("pid", requester.getIdentity());
-			b =  query.getSingleResult();
-		}catch(NoResultException e){
-			b = null;
-		}finally{
+		try{
+			Bid bid = null;
+			Auction a = em.find(Auction.class, id);
+			for(Bid b : a.getBids()){
+				if(b.getBidder().getIdentity() == requester.getIdentity())
+					bid = b;
+			}
+			return bid;
+		} catch(NoResultException e){
+			throw new ClientErrorException(e.getMessage(), 404);
+		} catch(TransactionalException e) {
+			throw new ClientErrorException(e.getMessage(), 409);
+		} catch(Exception e) {
+			throw new ClientErrorException(e.getMessage(), 500);
+		} finally{
 			if(em.getTransaction().isActive()) em.getTransaction().rollback();
 			em.getTransaction().begin();
 		}
-		return b;
 	}
 	
 	/**
@@ -231,7 +236,7 @@ public class AuctionService {
 	 */
 	@POST
 	@Path("{identity}/bid")
-	@Produces(MediaType.APPLICATION_XML)
+	@Produces({MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML})
 	public void setRequestersBid(
 			@NotNull @HeaderParam ("Authorization") String authentication, 
 			@PathParam("identity") final long id,
