@@ -39,9 +39,9 @@ public class AuctionService {
 	 * @return
 	 */
 	@GET
-	@Produces({MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML})
+	@Produces({MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML}) //@Bid.XmlBidderAsEntityFilter
 	public List<Auction> getAuctions(
-		@NotNull @HeaderParam ("Authorization") String authentication,
+		@NotNull @HeaderParam ("Authorization") String authentication, // TODO remove all @NotNull at authentication
 		@QueryParam("lowerVersion") final Integer lowerVersion,
 		@QueryParam("upperVersion") final Integer upperVersion,
 		@QueryParam("upperCreationTimeStamp") final Long upperCreationTimeStamp,
@@ -109,14 +109,8 @@ public class AuctionService {
 			Comparator<Auction> comparator = Comparator.comparing(Auction::getClosureTimestamp).thenComparing(Auction::getIdentity);
 			auctions.sort(comparator);
 			return auctions;
-		} catch(NoResultException e){
-			throw new ClientErrorException(e.getMessage(), 404);
-			//l = new ArrayList<Auction>();
-		} catch(Exception e) {
-			throw new ClientErrorException(e.getMessage(), 500);
-		} finally{
-			if(em.getTransaction().isActive()) em.getTransaction().rollback();
-			em.getTransaction().begin();
+		} finally{ // TODO remove finally if only read method, isActive() is never necessary anymore
+			// I'm a teapot!
 		}
 	}
 	
@@ -150,23 +144,18 @@ public class AuctionService {
 				auction.setUnitCount(tmp.getUnitCount());
 				auction.setVersion(tmp.getVersion());
 			}
-			em.getTransaction().commit();
+			try {
+				em.getTransaction().commit();
+			} finally { //TODO use this for every put method / committing method
+				em.getTransaction().begin();
+			}
+			
 			return auction.getIdentity();
 		} catch(ValidationException e) {
 			throw new ClientErrorException(e.getMessage(), 409);
 		} catch(RollbackException e) {
 			throw new ClientErrorException(e.getMessage(), 409);
-		} catch(NoResultException e){
-			throw new ClientErrorException(e.getMessage(), 404);
-		} catch(Exception e) {
-			throw new ClientErrorException(e.getMessage(), 500);
-		} finally{
-	        if(em.getTransaction().isActive()){
-	            System.out.println("Entity Manager Rollback");
-	            em.getTransaction().rollback();
-	        }
-			RestHelper.update2ndLevelCache(em, tmp);
-			em.getTransaction().begin();
+		} finally{// TODO replace with: remove Seller from 2nd lvl chache
 		}
 	}
 	
@@ -184,13 +173,8 @@ public class AuctionService {
 		try{
 			Auction auction = em.find(Auction.class, id);
 			return auction;
-		} catch(NoResultException e){
-			throw new ClientErrorException(e.getMessage(), 404);
-		} catch(Exception e) {
-			throw new ClientErrorException(e.getMessage(), 500);
 		} finally{
-			if(em.getTransaction().isActive()) em.getTransaction().rollback();
-			em.getTransaction().begin();
+			// TODO we can't remove this
 		}
 	}
 	
@@ -208,22 +192,10 @@ public class AuctionService {
 		final EntityManager em = LifeCycleProvider.brokerManager();
 		Person requester = LifeCycleProvider.authenticate(authentication);
 		try{
-			Bid bid = null;
-			Auction a = em.find(Auction.class, id);
-			for(Bid b : a.getBids()){
-				if(b.getBidder().getIdentity() == requester.getIdentity())
-					bid = b;
-			}
-			return bid;
-		} catch(NoResultException e){
-			throw new ClientErrorException(e.getMessage(), 404);
+			final Auction a = em.find(Auction.class, id);
+			return a.getBid(requester);
 		} catch(TransactionalException e) {
 			throw new ClientErrorException(e.getMessage(), 409);
-		} catch(Exception e) {
-			throw new ClientErrorException(e.getMessage(), 500);
-		} finally{
-			if(em.getTransaction().isActive()) em.getTransaction().rollback();
-			em.getTransaction().begin();
 		}
 	}
 	
@@ -236,9 +208,9 @@ public class AuctionService {
 	@POST
 	@Path("{identity}/bid")
 	@Produces(MediaType.TEXT_PLAIN)
-	@Consumes({MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML})
+	@Consumes(MediaType.TEXT_PLAIN)
 	public long setRequestersBid(
-			@Valid Bid tmp,
+			@Valid final long price, 
 			@NotNull @HeaderParam ("Authorization") String authentication, 
 			@PathParam("identity") final long id
 	){
@@ -246,38 +218,31 @@ public class AuctionService {
 		Person requester = LifeCycleProvider.authenticate(authentication);
 		
 		try{
-	        final boolean insertMode = tmp.getIdentity() == 0;
-	        final Bid bid;
-	        Auction auction = em.find(Auction.class, id);
-	        if(insertMode) {
+	        final Auction auction = em.find(Auction.class, id);
+	        Bid bid = auction.getBid(requester);
+	        if (bid == null) {
 	        	bid = new Bid(auction, requester);
-	        } else {
-	        	bid = em.find(Bid.class, tmp.getIdentity());
-	        }
-	        bid.setPrice(tmp.getPrice());
-	        bid.setVersion(tmp.getVersion());
-            if(tmp.getPrice() == 0){
+	        } 
+	        bid.setPrice(price);
+            if(price == 0){
             	em.remove(bid);
-            }else if(insertMode)
+            } else if(bid.getIdentity() == 0) {
             	em.persist(bid);	
-            else
+            } else {
             	em.flush();
-            em.getTransaction().commit();
+        	}
+        	try {
+           	 	em.getTransaction().commit();
+        	} finally {
+        		em.getTransaction().begin();
+        	}
             return bid.getIdentity();
-	    } catch(NoResultException e){
-			throw new ClientErrorException(e.getMessage(), 404);
-		} catch(TransactionalException e) {
+	    } catch(TransactionalException e) {
 			throw new ClientErrorException(e.getMessage(), 409);
 		} catch(ClientErrorException e) {
 			throw new ClientErrorException(403);
-		} catch(Exception e) {
-			throw new ClientErrorException(e.getMessage(), 500);
 		} finally {
-	        if(em.getTransaction().isActive()){
-	            em.getTransaction().rollback();
-	        }
-			em.getTransaction().begin();
-	        RestHelper.update2ndLevelCache(em, tmp);
+//	         TODO RestHelper.update2ndLevelCache(em, tmp);
 	    }
 	}
 }

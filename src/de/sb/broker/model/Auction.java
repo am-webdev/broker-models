@@ -1,5 +1,9 @@
 package de.sb.broker.model;
 
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -22,6 +26,8 @@ import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
 import javax.xml.bind.annotation.XmlType;
 
+import org.glassfish.jersey.message.filtering.EntityFiltering;
+
 import de.sb.java.validation.Inequal;
 
 @Entity
@@ -32,18 +38,6 @@ import de.sb.java.validation.Inequal;
 @XmlType
 @XmlRootElement
 public class Auction extends BaseEntity {
-	
-	static public @interface XmlSellerAsEntityFilter {
-		static final class Literal extends AnnotationLiteral<XmlSellerAsEntityFilter> implements XmlSellerAsEntityFilter {}
-	}
-	
-	static public @interface XmlSellerAsReferenceFilter {
-		static final class Literal extends AnnotationLiteral<XmlSellerAsReferenceFilter> implements XmlSellerAsReferenceFilter {}
-	}
-	
-	static public @interface XmlBidsAsEntityFilter {
-		static final class Literal extends AnnotationLiteral<XmlBidsAsEntityFilter> implements XmlBidsAsEntityFilter {}
-	}
 
 	@XmlElement
 	@Column(name = "title", updatable=true, nullable=false, insertable=true)
@@ -142,20 +136,22 @@ public class Auction extends BaseEntity {
 		return rtn;
 	}
 	
-	@XmlElement
 	@XmlBidsAsEntityFilter
+	@XmlElement
 	public Set<Bid> getBids() {
 		return this.bids;
 	}
 	
-	@XmlElement
+	
 	@XmlSellerAsReferenceFilter
+	@XmlElement
 	public long getSellerReference() {
 		return this.seller == null ? 0: this.seller.getIdentity();
 	}
 	
-	@XmlElement
+	
 	@XmlSellerAsEntityFilter
+	@XmlElement
 	public Person getSeller() {
 		return this.seller;
 	}
@@ -173,11 +169,38 @@ public class Auction extends BaseEntity {
 	public boolean isSealed() {
 		return !isClosed() && !this.getBids().isEmpty();
 	}
-	
-// TODO: BUG FIX -> Unknown column 't1.auctionIdentity' in 'field list'
-// Reference Error!!!
-//	@XmlElement
-//	public boolean isSealed() {
-//		return (this.bids.size() > 0 || isClosed());
-//	}
+
+	/**
+	 * Filter annotation for associated sellers marshaled as entities.
+	 */
+	@Target({ElementType.TYPE, ElementType.METHOD, ElementType.FIELD})
+	@Retention(RetentionPolicy.RUNTIME)
+	@EntityFiltering
+	@SuppressWarnings("all")
+	static public @interface XmlSellerAsEntityFilter {
+		static final class Literal extends AnnotationLiteral<XmlSellerAsEntityFilter> implements XmlSellerAsEntityFilter {}
+	}
+
+	/**
+	 * Filter annotation for associated sellers marshaled as references.
+	 */
+	@Target({ElementType.TYPE, ElementType.METHOD, ElementType.FIELD})
+	@Retention(RetentionPolicy.RUNTIME)
+	@EntityFiltering
+	@SuppressWarnings("all")
+	static public @interface XmlSellerAsReferenceFilter {
+		static final class Literal extends AnnotationLiteral<XmlSellerAsReferenceFilter> implements XmlSellerAsReferenceFilter {}
+	}
+
+	/**
+	 * Filter annotation for associated bids marshaled as entities.
+	 */
+	@Target({ElementType.TYPE, ElementType.METHOD, ElementType.FIELD})
+	@Retention(RetentionPolicy.RUNTIME)
+	@EntityFiltering
+	@SuppressWarnings("all")
+	static public @interface XmlBidsAsEntityFilter {
+		static final class Literal extends AnnotationLiteral<XmlBidsAsEntityFilter> implements XmlBidsAsEntityFilter {}
+	}
+
 }

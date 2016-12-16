@@ -4,6 +4,7 @@ import java.security.MessageDigest;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.TooManyListenersException;
 
 import javax.persistence.Cache;
 import javax.persistence.EntityManager;
@@ -147,15 +148,9 @@ public class PersonService {
 	public Person getPeopleIdentity(@PathParam("identity") final long id){
 		final EntityManager em = LifeCycleProvider.brokerManager();
 		try{
-			Person p = em.find(Person.class, id);
-			return p;
-		}catch(NoResultException e){
-			throw new ClientErrorException(e.getMessage(), 404);
-		} catch(Exception e) {
-			throw new ClientErrorException(e.getMessage(), 500);
+			return em.find(Person.class, id);
 		} finally{
-			if(em.getTransaction().isActive()) em.getTransaction().rollback();
-			em.getTransaction().begin();
+			// Why can't this be removed???
 		}
 		
 	}
@@ -188,12 +183,7 @@ public class PersonService {
 			throw new ClientErrorException(e.getMessage(), 404);
 		} catch(TransactionalException e) {
 			throw new ClientErrorException(e.getMessage(), 409);
-		} catch(Exception e) {
-			throw new ClientErrorException(e.getMessage(), 500);
-		} finally {
-			if(em.getTransaction().isActive()) em.getTransaction().rollback();
-			em.getTransaction().begin();
-		}
+		} 
 	}
 	
 	/**
@@ -213,21 +203,19 @@ public class PersonService {
 		try{
 			List<Bid> bids = new ArrayList<Bid>();
 			Person p = em.find(Person.class, id);
+			if(p == null) throw new ClientErrorException(404);
+
 			for(Bid b : p.getBids()){
 				if(b.getAuction().isClosed())
 					bids.add(b);
 			}
+
+			Comparator<Bid> comparator = Comparator.comparing(Bid::getPrice).thenComparing(Bid::getIdentity);
+			bids.sort(comparator);
 			return bids;
-		} catch(NoResultException e){
-			throw new ClientErrorException(e.getMessage(), 404);
 		} catch(TransactionalException e) {
 			throw new ClientErrorException(e.getMessage(), 409);
-		} catch(Exception e) {
-			throw new ClientErrorException(e.getMessage(), 500);
-		} finally{
-			if(em.getTransaction().isActive()) em.getTransaction().rollback();
-			em.getTransaction().begin();
-		}
+		} 
 	}
 	
 	/**
@@ -263,21 +251,14 @@ public class PersonService {
             	em.flush();
             em.getTransaction().commit();
             return person.getIdentity();
-        } catch(NoResultException e){
-			throw new ClientErrorException(e.getMessage(), 404);
-		} catch(TransactionalException e) {
+        } catch(TransactionalException e) {
 			throw new ClientErrorException(e.getMessage(), 409);
 		} catch(ClientErrorException e) {
     		throw new ClientErrorException(403);
-		} catch(Exception e) {
-			throw new ClientErrorException(e.getMessage(), 500);
 		} finally {
-            if(em.getTransaction().isActive()){
-                em.getTransaction().rollback();
-            }
-			em.getTransaction().begin();
-            RestHelper.update2ndLevelCache(em, tmp);
+            // TODO remove bids / auction from 2nd lvl? 
         }
+        
     }
 	
 	/* Services for avatar */
@@ -295,12 +276,7 @@ public class PersonService {
 				return Response.ok(d.getContent(), d.getType()).build();
 		} catch(NoResultException e){
 			throw new ClientErrorException(e.getMessage(), 404);
-		} catch(Exception e) {
-			throw new ClientErrorException(e.getMessage(), 500);
-		} finally{
-			if(em.getTransaction().isActive()) em.getTransaction().rollback();
-			em.getTransaction().begin();
-		}
+		} 
     }
 
 	@PUT
@@ -327,18 +303,12 @@ public class PersonService {
 		try {
 			TypedQuery<Long> q = em.createQuery("SELECT d.identity FROM Document d WHERE d.hash = :hash", Long.class)
 					.setParameter("hash", uploadedDocument.getHash());	// value is stored as "byte[32] --> cannot compare with String
-			l = q.getSingleResult();
+			l = q.getSingleResult(); // TODO TooManyResultsException
 		} catch(NoResultException e){
 			throw new ClientErrorException(e.getMessage(), 404);
 		} catch(TransactionalException e) {
 			throw new ClientErrorException(e.getMessage(), 409);
-		} catch(Exception e) {
-			throw new ClientErrorException(e.getMessage(), 500);
-		} finally {
-			if(em.getTransaction().isActive()) em.getTransaction().rollback();
-			em.clear();
-			em.getTransaction().begin();
-		}
+		} 
 		
 		/*
 		 * Depending on result length, either a new entry should be stored 
@@ -355,27 +325,19 @@ public class PersonService {
 					em.getTransaction().begin();
 					avatar.setVersion(avatar.getVersion());
 					avatar.setType(uploadedDocument.getType());
-					em.getTransaction().commit();
+					try {
+						em.getTransaction().commit();
+					} finally {
+						em.getTransaction().begin();
+					}
 					System.out.println("saved updated avatar within db: " + uploadedDocument.toString());
 				} else {
 					System.out.println("Nothing to do in here");
 				}
 			}
-		} catch(NoResultException e){
-			throw new ClientErrorException(e.getMessage(), 404);
 		} catch(TransactionalException e) {
 			throw new ClientErrorException(e.getMessage(), 409);
-		} catch(Exception e) {
-			throw new ClientErrorException(e.getMessage(), 500);
-		} finally{
-			em.flush();
-	        if(em.getTransaction().isActive()){
-	            System.out.println("Entity Manager Rollback");
-	            em.getTransaction().rollback();
-	        }
-			em.clear();
-			em.getTransaction().begin();
-		}
+		} 
 		
 
 		/*
@@ -392,19 +354,14 @@ public class PersonService {
 					person.setAvatar(null); //Anmerkung: wie soll ein Avatar gelöscht werden? 
 				}
 				em.flush();
-			}  catch(NoResultException e){
-				throw new ClientErrorException(e.getMessage(), 404);
-			} catch(TransactionalException e) {
+				try {
+					em.getTransaction().commit();
+				} finally {
+					em.getTransaction().begin();
+				}
+			}  catch(TransactionalException e) {
 				throw new ClientErrorException(e.getMessage(), 409);
-			} catch(Exception e) {
-				throw new ClientErrorException(e.getMessage(), 500);
-			} finally {
-		        if(em.getTransaction().isActive()){
-		            System.out.println("Entity Manager Rollback");
-		            em.getTransaction().rollback();
-		        }
-				em.getTransaction().begin();
-			}	
+			} 	
 		}
 		return l;
 	}
