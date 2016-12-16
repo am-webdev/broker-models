@@ -6,9 +6,9 @@
 
 		<properties>
 			<property name="javax.persistence.jdbc.driver" value="com.mysql.jdbc.Driver"/>
-			<property name="javax.persistence.jdbc.url" value="jdbc:mysql://localhost:3306/?useSSL=false" />
-			<property name="javax.persistence.jdbc.user" value="root"/>
-			<property name="javax.persistence.jdbc.password" value=""/>
+			<property name="javax.persistence.jdbc.url" value="jdbc:mysql://db.f4.htw-berlin.de" />
+			<property name="javax.persistence.jdbc.user" value="s0542502"/>
+			<property name="javax.persistence.jdbc.password" value="MyBest4590"/>
 
 			<property name="eclipselink.logging.level.sql" value="FINE"/>
 			<property name="eclipselink.logging.parameters" value="true"/>
