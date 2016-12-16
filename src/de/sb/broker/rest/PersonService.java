@@ -244,7 +244,6 @@ public class PersonService {
     public long setPerson(@Valid Person tmp, @HeaderParam("Set-password") final String pw){ 
 	final EntityManager em = LifeCycleProvider.brokerManager();
         try{
-            em.getTransaction().begin();
             final boolean insertMode = tmp.getIdentity() == 0;
             final Person person;
             if(insertMode) {
