@@ -127,9 +127,9 @@ public class AuctionService {
 			@Valid Auction tmp){
 		final EntityManager em = LifeCycleProvider.brokerManager();
 		Person requester = LifeCycleProvider.authenticate(authentication);
+		Auction auction = null;
 		try{
 			final boolean insertMode = tmp.getIdentity() == 0;
-			final Auction auction;
 			final Person seller = em.find(Person.class, tmp.getSeller().getIdentity());
 			if(insertMode)
 				auction = new Auction(seller);
@@ -155,7 +155,8 @@ public class AuctionService {
 			throw new ClientErrorException(e.getMessage(), 409);
 		} catch(RollbackException e) {
 			throw new ClientErrorException(e.getMessage(), 409);
-		} finally{// TODO replace with: remove Seller from 2nd lvl chache
+		} finally{
+			em.getEntityManagerFactory().getCache().evict(Person.class, auction.getSeller());
 		}
 	}
 	
