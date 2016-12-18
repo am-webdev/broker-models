@@ -123,7 +123,7 @@ public class AuctionService {
 	@Consumes({MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML})
 	@Produces(MediaType.TEXT_PLAIN)
 	public long setAuction(
-			@NotNull @HeaderParam ("Authorization") String authentication,
+			@HeaderParam ("Authorization") String authentication,
 			@Valid Auction tmp){
 		final EntityManager em = LifeCycleProvider.brokerManager();
 		Person requester = LifeCycleProvider.authenticate(authentication);
@@ -187,7 +187,7 @@ public class AuctionService {
 	@Path("{identity}/bid")
 	@Produces({MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML})
 	public Bid getBidForAuction(
-			@NotNull @HeaderParam ("Authorization") String authentication, 
+			@HeaderParam ("Authorization") String authentication, 
 			@PathParam("identity") final long id){
 		final EntityManager em = LifeCycleProvider.brokerManager();
 		Person requester = LifeCycleProvider.authenticate(authentication);
@@ -211,7 +211,7 @@ public class AuctionService {
 	@Consumes(MediaType.TEXT_PLAIN)
 	public long setRequestersBid(
 			@Valid final long price, 
-			@NotNull @HeaderParam ("Authorization") String authentication, 
+			@HeaderParam ("Authorization") String authentication, 
 			@PathParam("identity") final long id
 	){
 		final EntityManager em = LifeCycleProvider.brokerManager();

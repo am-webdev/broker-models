@@ -133,7 +133,7 @@ public class PersonService {
 	@Path("/requester")
 	@Produces({MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML})
 	public Person getRequester(
-			@NotNull @HeaderParam ("Authorization") String authentication){
+			@HeaderParam ("Authorization") String authentication){
 		return LifeCycleProvider.authenticate(authentication);
 	}
 	
@@ -195,7 +195,7 @@ public class PersonService {
 	@Path("{identity}/bids")
 	@Produces({MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML})
 	public List<Bid> getPeopleIdentityBids(
-					@NotNull @HeaderParam ("Authorization") String authentication, 
+					@HeaderParam ("Authorization") String authentication, 
 					@PathParam("identity") final long id){
 		final EntityManager em = LifeCycleProvider.brokerManager();
 		Person requester = LifeCycleProvider.authenticate(authentication);
