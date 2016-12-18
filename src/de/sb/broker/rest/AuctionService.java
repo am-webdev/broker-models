@@ -216,9 +216,9 @@ public class AuctionService {
 	){
 		final EntityManager em = LifeCycleProvider.brokerManager();
 		Person requester = LifeCycleProvider.authenticate(authentication);
-		
+		Auction auction = null;
 		try{
-	        final Auction auction = em.find(Auction.class, id);
+	        auction = em.find(Auction.class, id);
 	        Bid bid = auction.getBid(requester);
 	        if (bid == null) {
 	        	bid = new Bid(auction, requester);
@@ -242,7 +242,10 @@ public class AuctionService {
 		} catch(ClientErrorException e) {
 			throw new ClientErrorException(403);
 		} finally {
-//	         TODO RestHelper.update2ndLevelCache(em, tmp);
+			em.getEntityManagerFactory().getCache().evict(Person.class, auction.getSeller());
+			for (Bid bid : auction.getBids()) {
+				em.getEntityManagerFactory().getCache().evict(Bid.class, bid);
+			}
 	    }
 	}
 }

@@ -33,6 +33,7 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.ResponseBuilder;
 import javax.ws.rs.core.Response.Status;
+import javax.xml.registry.infomodel.PersonName;
 
 import de.sb.broker.model.Auction;
 import de.sb.broker.model.Bid;
@@ -199,7 +200,6 @@ public class PersonService {
 					@PathParam("identity") final long id){
 		final EntityManager em = LifeCycleProvider.brokerManager();
 		Person requester = LifeCycleProvider.authenticate(authentication);
-		List<Bid> l = new ArrayList<Bid>();
 		try{
 			List<Bid> bids = new ArrayList<Bid>();
 			Person p = em.find(Person.class, id);
@@ -231,9 +231,9 @@ public class PersonService {
     @Produces(MediaType.TEXT_PLAIN)
     public long setPerson(@Valid Person tmp, @HeaderParam("Set-password") final String pw){ 
 	final EntityManager em = LifeCycleProvider.brokerManager();
+    Person person = null;
         try{
             final boolean insertMode = tmp.getIdentity() == 0;
-            final Person person;
             if(insertMode) {
             	person = new Person();	
             } else {
@@ -256,7 +256,12 @@ public class PersonService {
 		} catch(ClientErrorException e) {
     		throw new ClientErrorException(403);
 		} finally {
-            // TODO remove bids / auction from 2nd lvl? 
+			for (Auction auction : person.getAuctions()) {
+				em.getEntityManagerFactory().getCache().evict(Auction.class, auction);
+			}
+			for (Bid bid : person.getBids()) {
+				em.getEntityManagerFactory().getCache().evict(Bid.class, bid);
+			}
         }
         
     }
@@ -351,14 +356,9 @@ public class PersonService {
 				if (uploadedDocument.getContent().length != 0) {
 					person.setAvatar(avatar);
 				} else {
-					person.setAvatar(null); //Anmerkung: wie soll ein Avatar gelöscht werden? 
+					person.setAvatar(null); //TODO Anmerkung: wie soll ein Avatar gelöscht werden? 
 				}
 				em.flush();
-				try {
-					em.getTransaction().commit();
-				} finally {
-					em.getTransaction().begin();
-				}
 			}  catch(TransactionalException e) {
 				throw new ClientErrorException(e.getMessage(), 409);
 			} 	
