@@ -149,7 +149,13 @@ public class PersonService {
 	public Person getPeopleIdentity(@PathParam("identity") final long id){
 		final EntityManager em = LifeCycleProvider.brokerManager();
 		try{
-			return em.find(Person.class, id);
+			Person p = em.find(Person.class, id);
+			if(p == null) {
+				throw new ClientErrorException(404);  // Why to throw this manually but not for auction/{identity} using the same code?
+			}
+			return p;
+		} catch(NoResultException e){
+			throw new ClientErrorException(e.getMessage(), 404);
 		} finally{
 			// Why can't this be removed???
 		}
