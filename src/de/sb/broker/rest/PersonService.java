@@ -126,8 +126,8 @@ public class PersonService {
 	}
 	
 	/**
-	 * Returns the person matching the given identity.
-	 * @param id
+	 * Returns the person matching the given authentication.
+	 * @param authentication
 	 * @return
 	 */
 	@GET
