@@ -4,6 +4,7 @@ import java.security.MessageDigest;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.TooManyListenersException;
 
 import javax.persistence.Cache;
 import javax.persistence.EntityManager;
@@ -32,6 +33,7 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.ResponseBuilder;
 import javax.ws.rs.core.Response.Status;
+import javax.xml.registry.infomodel.PersonName;
 
 import de.sb.broker.model.Auction;
 import de.sb.broker.model.Bid;
@@ -124,15 +126,15 @@ public class PersonService {
 	}
 	
 	/**
-	 * Returns the person matching the given identity.
-	 * @param id
+	 * Returns the person matching the given authentication.
+	 * @param authentication
 	 * @return
 	 */
 	@GET
 	@Path("/requester")
 	@Produces({MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML})
 	public Person getRequester(
-			@NotNull @HeaderParam ("Authorization") String authentication){
+			@HeaderParam ("Authorization") String authentication){
 		return LifeCycleProvider.authenticate(authentication);
 	}
 	
@@ -148,14 +150,14 @@ public class PersonService {
 		final EntityManager em = LifeCycleProvider.brokerManager();
 		try{
 			Person p = em.find(Person.class, id);
+			if(p == null) {
+				throw new ClientErrorException(404);  // Why to throw this manually but not for auction/{identity} using the same code?
+			}
 			return p;
-		}catch(NoResultException e){
+		} catch(NoResultException e){
 			throw new ClientErrorException(e.getMessage(), 404);
-		} catch(Exception e) {
-			throw new ClientErrorException(e.getMessage(), 500);
 		} finally{
-			if(em.getTransaction().isActive()) em.getTransaction().rollback();
-			em.getTransaction().begin();
+			// Why can't this be removed???
 		}
 		
 	}
@@ -188,12 +190,7 @@ public class PersonService {
 			throw new ClientErrorException(e.getMessage(), 404);
 		} catch(TransactionalException e) {
 			throw new ClientErrorException(e.getMessage(), 409);
-		} catch(Exception e) {
-			throw new ClientErrorException(e.getMessage(), 500);
-		} finally {
-			if(em.getTransaction().isActive()) em.getTransaction().rollback();
-			em.getTransaction().begin();
-		}
+		} 
 	}
 	
 	/**
@@ -205,29 +202,26 @@ public class PersonService {
 	@Path("{identity}/bids")
 	@Produces({MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML})
 	public List<Bid> getPeopleIdentityBids(
-					@NotNull @HeaderParam ("Authorization") String authentication, 
+					@HeaderParam ("Authorization") String authentication, 
 					@PathParam("identity") final long id){
 		final EntityManager em = LifeCycleProvider.brokerManager();
 		Person requester = LifeCycleProvider.authenticate(authentication);
-		List<Bid> l = new ArrayList<Bid>();
 		try{
 			List<Bid> bids = new ArrayList<Bid>();
 			Person p = em.find(Person.class, id);
+			if(p == null) throw new ClientErrorException(404);
+
 			for(Bid b : p.getBids()){
 				if(b.getAuction().isClosed())
 					bids.add(b);
 			}
+
+			Comparator<Bid> comparator = Comparator.comparing(Bid::getPrice).thenComparing(Bid::getIdentity);
+			bids.sort(comparator);
 			return bids;
-		} catch(NoResultException e){
-			throw new ClientErrorException(e.getMessage(), 404);
 		} catch(TransactionalException e) {
 			throw new ClientErrorException(e.getMessage(), 409);
-		} catch(Exception e) {
-			throw new ClientErrorException(e.getMessage(), 500);
-		} finally{
-			if(em.getTransaction().isActive()) em.getTransaction().rollback();
-			em.getTransaction().begin();
-		}
+		} 
 	}
 	
 	/**
@@ -243,9 +237,9 @@ public class PersonService {
     @Produces(MediaType.TEXT_PLAIN)
     public long setPerson(@Valid Person tmp, @HeaderParam("Set-password") final String pw){ 
 	final EntityManager em = LifeCycleProvider.brokerManager();
+    Person person = null;
         try{
             final boolean insertMode = tmp.getIdentity() == 0;
-            final Person person;
             if(insertMode) {
             	person = new Person();	
             } else {
@@ -263,21 +257,19 @@ public class PersonService {
             	em.flush();
             em.getTransaction().commit();
             return person.getIdentity();
-        } catch(NoResultException e){
-			throw new ClientErrorException(e.getMessage(), 404);
-		} catch(TransactionalException e) {
+        } catch(TransactionalException e) {
 			throw new ClientErrorException(e.getMessage(), 409);
 		} catch(ClientErrorException e) {
     		throw new ClientErrorException(403);
-		} catch(Exception e) {
-			throw new ClientErrorException(e.getMessage(), 500);
 		} finally {
-            if(em.getTransaction().isActive()){
-                em.getTransaction().rollback();
-            }
-			em.getTransaction().begin();
-            RestHelper.update2ndLevelCache(em, tmp);
+			for (Auction auction : person.getAuctions()) {
+				em.getEntityManagerFactory().getCache().evict(Auction.class, auction);
+			}
+			for (Bid bid : person.getBids()) {
+				em.getEntityManagerFactory().getCache().evict(Bid.class, bid);
+			}
         }
+        
     }
 	
 	/* Services for avatar */
@@ -295,12 +287,7 @@ public class PersonService {
 				return Response.ok(d.getContent(), d.getType()).build();
 		} catch(NoResultException e){
 			throw new ClientErrorException(e.getMessage(), 404);
-		} catch(Exception e) {
-			throw new ClientErrorException(e.getMessage(), 500);
-		} finally{
-			if(em.getTransaction().isActive()) em.getTransaction().rollback();
-			em.getTransaction().begin();
-		}
+		} 
     }
 
 	@PUT
@@ -327,18 +314,12 @@ public class PersonService {
 		try {
 			TypedQuery<Long> q = em.createQuery("SELECT d.identity FROM Document d WHERE d.hash = :hash", Long.class)
 					.setParameter("hash", uploadedDocument.getHash());	// value is stored as "byte[32] --> cannot compare with String
-			l = q.getSingleResult();
+			l = q.getSingleResult(); // TODO TooManyResultsException
 		} catch(NoResultException e){
 			throw new ClientErrorException(e.getMessage(), 404);
 		} catch(TransactionalException e) {
 			throw new ClientErrorException(e.getMessage(), 409);
-		} catch(Exception e) {
-			throw new ClientErrorException(e.getMessage(), 500);
-		} finally {
-			if(em.getTransaction().isActive()) em.getTransaction().rollback();
-			em.clear();
-			em.getTransaction().begin();
-		}
+		} 
 		
 		/*
 		 * Depending on result length, either a new entry should be stored 
@@ -355,27 +336,19 @@ public class PersonService {
 					em.getTransaction().begin();
 					avatar.setVersion(avatar.getVersion());
 					avatar.setType(uploadedDocument.getType());
-					em.getTransaction().commit();
+					try {
+						em.getTransaction().commit();
+					} finally {
+						em.getTransaction().begin();
+					}
 					System.out.println("saved updated avatar within db: " + uploadedDocument.toString());
 				} else {
 					System.out.println("Nothing to do in here");
 				}
 			}
-		} catch(NoResultException e){
-			throw new ClientErrorException(e.getMessage(), 404);
 		} catch(TransactionalException e) {
 			throw new ClientErrorException(e.getMessage(), 409);
-		} catch(Exception e) {
-			throw new ClientErrorException(e.getMessage(), 500);
-		} finally{
-			em.flush();
-	        if(em.getTransaction().isActive()){
-	            System.out.println("Entity Manager Rollback");
-	            em.getTransaction().rollback();
-	        }
-			em.clear();
-			em.getTransaction().begin();
-		}
+		} 
 		
 
 		/*
@@ -389,22 +362,12 @@ public class PersonService {
 				if (uploadedDocument.getContent().length != 0) {
 					person.setAvatar(avatar);
 				} else {
-					person.setAvatar(null); //Anmerkung: wie soll ein Avatar gelöscht werden? 
+					person.setAvatar(null); //TODO Anmerkung: wie soll ein Avatar gelöscht werden? 
 				}
 				em.flush();
-			}  catch(NoResultException e){
-				throw new ClientErrorException(e.getMessage(), 404);
-			} catch(TransactionalException e) {
+			}  catch(TransactionalException e) {
 				throw new ClientErrorException(e.getMessage(), 409);
-			} catch(Exception e) {
-				throw new ClientErrorException(e.getMessage(), 500);
-			} finally {
-		        if(em.getTransaction().isActive()){
-		            System.out.println("Entity Manager Rollback");
-		            em.getTransaction().rollback();
-		        }
-				em.getTransaction().begin();
-			}	
+			} 	
 		}
 		return l;
 	}
