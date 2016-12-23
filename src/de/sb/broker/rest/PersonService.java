@@ -1,25 +1,17 @@
 package de.sb.broker.rest;
 
+import java.lang.annotation.Annotation;
 import java.security.MessageDigest;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
-import java.util.TooManyListenersException;
 
-import javax.persistence.Cache;
 import javax.persistence.EntityManager;
-import javax.persistence.EntityManagerFactory;
 import javax.persistence.NoResultException;
-import javax.persistence.Persistence;
 import javax.persistence.TypedQuery;
-import javax.validation.constraints.NotNull;
-import javax.persistence.criteria.CriteriaBuilder;
-import javax.persistence.criteria.CriteriaQuery;
-import javax.persistence.criteria.Root;
 import javax.validation.Valid;
 import javax.transaction.TransactionalException;
-import javax.validation.Valid;
-import javax.validation.constraints.NotNull;
 import javax.ws.rs.ClientErrorException;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.GET;
@@ -29,17 +21,15 @@ import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
+import javax.ws.rs.core.GenericEntity;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
-import javax.ws.rs.core.Response.ResponseBuilder;
 import javax.ws.rs.core.Response.Status;
-import javax.xml.registry.infomodel.PersonName;
 
 import de.sb.broker.model.Auction;
 import de.sb.broker.model.Bid;
 import de.sb.broker.model.Document;
 import de.sb.broker.model.Person;
-import de.sb.broker.model.Person.Group;
 
 @Path("people")
 public class PersonService {
@@ -169,12 +159,14 @@ public class PersonService {
 	 */
 	@GET
 	@Path("{identity}/auctions")
-	@Produces({MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML})
+	@Produces({MediaType.APPLICATION_XML, MediaType.APPLICATION_JSON})
 	public List<Auction> getPeopleIdentityAuctions(
+			@HeaderParam ("Authorization") String authentication, 
 			@PathParam("identity") final long id,
 			@QueryParam("closed") final boolean isClosed,
 			@QueryParam("seller") final boolean isSeller ) {
-		final EntityManager em = LifeCycleProvider.brokerManager();		
+		final EntityManager em = LifeCycleProvider.brokerManager();	
+		LifeCycleProvider.authenticate(authentication);
 		try{
 			List<Auction> auctions = new ArrayList<Auction>();
 			Person p = em.find(Person.class, id);
@@ -183,6 +175,7 @@ public class PersonService {
 				// TODO IF closed seller??
 				auctions.add(b.getAuction());
 			}
+			
 			Comparator<Auction> comparator = Comparator.comparing(Auction::getClosureTimestamp).thenComparing(Auction::getIdentity);
 			auctions.sort(comparator);
 			return auctions;
@@ -200,22 +193,28 @@ public class PersonService {
 	 */
 	@GET
 	@Path("{identity}/bids")
-	@Produces({MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML})
+	@Produces({MediaType.APPLICATION_XML, MediaType.APPLICATION_JSON})
+	@Bid.XmlBidderAsReferenceFilter
+	@Bid.XmlAuctionAsReferenceFilter
 	public List<Bid> getPeopleIdentityBids(
 					@HeaderParam ("Authorization") String authentication, 
 					@PathParam("identity") final long id){
 		final EntityManager em = LifeCycleProvider.brokerManager();
 		Person requester = LifeCycleProvider.authenticate(authentication);
+		boolean isPerson = false;
 		try{
 			List<Bid> bids = new ArrayList<Bid>();
 			Person p = em.find(Person.class, id);
+			isPerson = p.getIdentity() == requester.getIdentity();
 			if(p == null) throw new ClientErrorException(404);
 
 			for(Bid b : p.getBids()){
-				if(b.getAuction().isClosed())
+				if (isPerson) {
+					bids.add(b);
+				}else if(b.getAuction().isClosed())
 					bids.add(b);
 			}
-
+			
 			Comparator<Bid> comparator = Comparator.comparing(Bid::getPrice).thenComparing(Bid::getIdentity);
 			bids.sort(comparator);
 			return bids;
