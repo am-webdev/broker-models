@@ -127,7 +127,8 @@ public class AuctionService {
 		Auction auction = null;
 		try{
 			final boolean insertMode = tmp.getIdentity() == 0;
-			final Person seller = em.find(Person.class, tmp.getSeller().getIdentity());
+			//final Person seller = em.find(Person.class, tmp.getSeller().getIdentity());
+			final Person seller = requester;
 			if(insertMode)
 				auction = new Auction(seller);
 			else
@@ -136,13 +137,18 @@ public class AuctionService {
 				auction.setAskingPrice(tmp.getAskingPrice());
 				auction.setClosureTimestamp(tmp.getClosureTimestamp());
 				auction.setDescription(tmp.getDescription());
-				auction.setSeller(tmp.getSeller());
+				//auction.setSeller(tmp.getSeller());
 				auction.setTitle(tmp.getTitle());
 				auction.setUnitCount(tmp.getUnitCount());
 				auction.setVersion(tmp.getVersion());
 			}
 			try {
-				em.getTransaction().commit();
+				if(insertMode)
+	            	em.persist(auction);	
+	            else
+	            	em.flush();
+	            em.getTransaction().commit();
+				
 			} finally { //TODO use this for every put method / committing method
 				em.getTransaction().begin();
 			}
@@ -153,7 +159,8 @@ public class AuctionService {
 		} catch(RollbackException e) {
 			throw new ClientErrorException(e.getMessage(), 409);
 		} finally{
-			em.getEntityManagerFactory().getCache().evict(Person.class, auction.getSeller());
+			//em.getEntityManagerFactory().getCache().evict(Person.class, auction.getSeller());
+			// TODO wirft einen Convert Exception
 		}
 	}
 	
