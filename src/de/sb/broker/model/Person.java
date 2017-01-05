@@ -18,7 +18,6 @@ import javax.persistence.FetchType;
 import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
 import javax.persistence.OneToMany;
-import javax.persistence.OneToOne;
 import javax.persistence.PrimaryKeyJoinColumn;
 import javax.persistence.Table;
 import javax.validation.Valid;
@@ -32,12 +31,21 @@ import javax.xml.bind.annotation.XmlType;
 
 import org.eclipse.persistence.annotations.CacheIndex;
 
+/*@Entity
+@Table(name="Person", schema="_s0545840__brokerDB")
+@PrimaryKeyJoinColumn(name = "personIdentity")	
+@DiscriminatorValue("Person")
+@XmlType
+@XmlRootElement*/
+
 @Entity
 @Table(name="Person", schema="_s0545840__brokerDB")
 @PrimaryKeyJoinColumn(name = "personIdentity")	
 @DiscriminatorValue("Person")
 @XmlType
-@XmlRootElement
+@XmlRootElement(name="Person")
+@XmlAccessorType (XmlAccessType.NONE)
+
 public class Person extends BaseEntity {
 
 	public static enum Group {

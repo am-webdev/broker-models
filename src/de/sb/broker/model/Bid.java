@@ -8,7 +8,8 @@ import java.lang.annotation.Target;
 import javax.enterprise.util.AnnotationLiteral;
 import javax.persistence.*;
 import javax.validation.constraints.Min;
-import javax.validation.constraints.Size;
+import javax.xml.bind.annotation.XmlAccessType;
+import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
 import javax.xml.bind.annotation.XmlType;
@@ -17,7 +18,7 @@ import org.glassfish.jersey.message.filtering.EntityFiltering;
 
 import de.sb.java.validation.Inequal;
 
-@Entity()
+/*@Entity()
 @Table(name="Bid", schema="_s0545840__brokerDB")
 @PrimaryKeyJoinColumn(name = "bidIdentity")
 @DiscriminatorValue("Bid")			
@@ -25,6 +26,16 @@ import de.sb.java.validation.Inequal;
 @Inequal(leftAccessPath = { "bidder" , "identity" }, rightAccessPath = { "auction", "seller" , "identity" } , operator = Inequal.Operator.NOT_EQUAL)
 @XmlType
 @XmlRootElement
+@XmlAccessorType (XmlAccessType.NONE)*/
+
+@Entity
+@PrimaryKeyJoinColumn (name = "bidIdentity")
+@Table(name="Bid", schema="_s0545840__brokerDB")
+@DiscriminatorValue("Bid")	
+@Inequal (leftAccessPath = "price", rightAccessPath = { "auction", "askingPrice" }, operator = Inequal.Operator.GREATER_EQUAL)
+@Inequal (leftAccessPath = { "bidder", "identity" }, rightAccessPath = { "auction", "seller", "identity" })
+@XmlAccessorType (XmlAccessType.NONE)
+
 public class Bid extends BaseEntity {
 	
 	@XmlElement
@@ -61,7 +72,7 @@ public class Bid extends BaseEntity {
 	@XmlAuctionAsReferenceFilter
 	@XmlElement
 	public long getAuctionReference() {
-		return this.auction == null ? 0: getIdentity();
+		return this.auction == null ? 0: this.auction.getIdentity();
 		
 	}
 	
@@ -75,7 +86,7 @@ public class Bid extends BaseEntity {
 	@XmlBidderAsReferenceFilter
 	@XmlElement
 	public long getBidderReference(){
-		return this.bidder == null ? 0: getIdentity();
+		return this.bidder == null ? 0: this.bidder.getIdentity();
 	}
 
 	public long getPrice() {

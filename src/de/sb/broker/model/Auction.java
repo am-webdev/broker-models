@@ -21,22 +21,34 @@ import javax.persistence.Table;
 import javax.validation.constraints.Max;
 import javax.validation.constraints.Min;
 import javax.validation.constraints.Size;
+import javax.xml.bind.annotation.XmlAccessType;
+import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlAttribute;
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
+import javax.xml.bind.annotation.XmlTransient;
 import javax.xml.bind.annotation.XmlType;
 
 import org.glassfish.jersey.message.filtering.EntityFiltering;
 
 import de.sb.java.validation.Inequal;
 
-@Entity
+/*@Entity
 @Table(name="Auction", schema="_s0545840__brokerDB")
 @PrimaryKeyJoinColumn(name = "auctionIdentity")
 @DiscriminatorValue("Auction")			
 @Inequal(leftAccessPath = "closureTimestamp", rightAccessPath = "creationTimestamp", operator = Inequal.Operator.GREATER)
 @XmlType
 @XmlRootElement
+@XmlAccessorType (XmlAccessType.NONE)*/
+
+@Entity
+@PrimaryKeyJoinColumn (name = "auctionIdentity")
+@Table(name="Auction", schema="_s0545840__brokerDB")
+@DiscriminatorValue("Auction")	
+@Inequal (leftAccessPath = "closureTimestamp", rightAccessPath = "creationTimestamp", operator = Inequal.Operator.GREATER_EQUAL)
+@XmlAccessorType (XmlAccessType.NONE)
+
 public class Auction extends BaseEntity {
 
 	@XmlElement
