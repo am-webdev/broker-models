@@ -41,7 +41,7 @@ public class AuctionService {
 	 */
 	@GET
 	@Produces({MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML})
-	// TODO @Bid.XmlBidderAsEntityFilter
+	@Bid.XmlBidderAsEntityFilter
 	public Response getAuctions(
 		@HeaderParam ("Authorization") String authentication,
 		@QueryParam("lowerVersion") final Integer lowerVersion,
