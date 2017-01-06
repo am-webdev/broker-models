@@ -1,7 +1,7 @@
 *.class
 
 src/META-INF/persistence.xml
-src/META-INF/
+src/META-INF/*
 bin/
 
 # Mobile Tools for Java (J2ME)
