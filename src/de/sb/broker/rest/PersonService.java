@@ -279,11 +279,13 @@ public class PersonService {
 		final EntityManager em = LifeCycleProvider.brokerManager();
 		try{			
 			Person p = em.find(Person.class, id);
-			Document d = p.getAvatar();
-			if(d == null) 
-				return Response.status(Status.NOT_FOUND).build();
-			else
-				return Response.ok(d.getContent(), d.getType()).build();
+			if(p != null) {
+				Document d = p.getAvatar();
+				if(d != null) {
+					return Response.ok(d.getContent(), d.getType()).build();
+				}
+			}
+			return Response.status(Status.NOT_FOUND).build();
 		} catch(NoResultException e){
 			throw new ClientErrorException(e.getMessage(), 404);
 		} 
