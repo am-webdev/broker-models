@@ -131,12 +131,11 @@ public class LifeCycleProvider implements ContainerRequestFilter, ContainerRespo
 		TypedQuery<Person> query = em.createQuery(PERSON_BY_ALIAS, Person.class);
 		query.setParameter("alias", username);
 		query.setParameter("passwordHash", passwordHash);
-		try {
-
-			return em.find(Person.class, query.getSingleResult());	
-		} catch (NoResultException e) {
+		Person p = em.find(Person.class, query.getSingleResult());	
+		if (p == null) {
 			throw new ClientErrorException(401);
 		}
+		return p;
 	}
 
 

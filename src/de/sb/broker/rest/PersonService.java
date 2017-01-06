@@ -95,6 +95,8 @@ public class PersonService {
 			if (length > 0) {
 				q.setMaxResults(length);
 			}
+					
+			
 			l =  q.getResultList();
 			people = new ArrayList<Person>();
 			for (Long id : l) {
@@ -160,25 +162,84 @@ public class PersonService {
 	@GET
 	@Path("{identity}/auctions")
 	@Produces({MediaType.APPLICATION_XML, MediaType.APPLICATION_JSON})
-	public List<Auction> getPeopleIdentityAuctions(
+	public Response getPeopleIdentityAuctions(
 			@HeaderParam ("Authorization") String authentication, 
 			@PathParam("identity") final long id,
-			@QueryParam("closed") final boolean isClosed,
-			@QueryParam("seller") final boolean isSeller ) {
+			@QueryParam("closed") final Boolean isClosed,
+			@QueryParam("seller") final Boolean isSeller ) {
 		final EntityManager em = LifeCycleProvider.brokerManager();	
 		LifeCycleProvider.authenticate(authentication);
 		try{
 			List<Auction> auctions = new ArrayList<Auction>();
 			Person p = em.find(Person.class, id);
-			auctions.addAll(p.getAuctions());
-			for (Bid b : p.getBids()) {
-				// TODO IF closed seller??
-				auctions.add(b.getAuction());
+			
+			Annotation[] filterAnnotations = new Annotation[]{new Auction.XmlSellerAsEntityFilter.Literal()};
+
+			if (isSeller == null || !isSeller) {
+				for (Bid b : p.getBids()) {
+					if (isClosed == null) {
+						// return open and closed auctions
+						auctions.add(b.getAuction());
+					} else {
+						if (isClosed) {
+							filterAnnotations = new Annotation[]{
+									new Auction.XmlBidsAsEntityFilter.Literal(),
+									new Auction.XmlSellerAsEntityFilter.Literal(),
+									new Bid.XmlBidderAsEntityFilter.Literal(),
+									new Bid.XmlAuctionAsReferenceFilter.Literal()};
+
+							if (b.getAuction().isClosed()) {
+								auctions.add(b.getAuction());
+							}
+						} else {
+							if (!b.getAuction().isClosed()) {
+								auctions.add(b.getAuction());
+							}
+						}
+					}
+				}
 			}
+			
+			if (isSeller == null || isSeller) {
+				for (Auction a : p.getAuctions()) {
+					if (isClosed == null) {
+						// return open and closed auctions
+						auctions.add(a);
+					} else {
+						if (isClosed) {
+							if (isSeller) {
+								filterAnnotations = new Annotation[]{
+										new Auction.XmlBidsAsEntityFilter.Literal(),
+										new Auction.XmlSellerAsReferenceFilter.Literal(),
+										new Bid.XmlBidderAsEntityFilter.Literal(),
+										new Bid.XmlAuctionAsReferenceFilter.Literal()
+										};
+							} else {
+								filterAnnotations = new Annotation[]{
+										new Auction.XmlBidsAsEntityFilter.Literal(),
+										new Auction.XmlSellerAsEntityFilter.Literal(),
+										new Bid.XmlBidderAsEntityFilter.Literal(),
+										new Bid.XmlAuctionAsReferenceFilter.Literal()
+										};
+							}
+							if (a.isClosed()) {
+								auctions.add(a);
+							}
+						} else {
+							if (!a.isClosed()) {
+								auctions.add(a);
+							}
+						}
+					}
+				}	
+			}			
 			
 			Comparator<Auction> comparator = Comparator.comparing(Auction::getClosureTimestamp).thenComparing(Auction::getIdentity);
 			auctions.sort(comparator);
-			return auctions;
+			
+			GenericEntity<?> wrapper = new GenericEntity<Collection<Auction>>(auctions) {};
+			
+			return Response.ok().entity(wrapper, filterAnnotations).build();
 		} catch(NoResultException e){
 			throw new ClientErrorException(e.getMessage(), 404);
 		} catch(TransactionalException e) {
@@ -235,39 +296,40 @@ public class PersonService {
     @Consumes({MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML})
     @Produces(MediaType.TEXT_PLAIN)
     public long setPerson(@Valid Person tmp, @HeaderParam("Set-password") final String pw){ 
-	final EntityManager em = LifeCycleProvider.brokerManager();
-    Person person = null;
-        try{
-            final boolean insertMode = tmp.getIdentity() == 0;
-            if(insertMode) {
-            	person = new Person();	
-            } else {
-            	person = em.find(Person.class, tmp.getIdentity());
-            }
-            person.setAlias(tmp.getAlias());
-            person.setGroup(tmp.getGroup());
-            person.setName(tmp.getName());
-            person.setAddress(tmp.getAddress());
-            person.setContact(tmp.getContact());
-            person.setPasswordHash(Person.passwordHash(pw));
-            if(insertMode)
-            	em.persist(person);	
-            else
-            	em.flush();
-            em.getTransaction().commit();
-            return person.getIdentity();
-        } catch(TransactionalException e) {
-			throw new ClientErrorException(e.getMessage(), 409);
-		} catch(ClientErrorException e) {
-    		throw new ClientErrorException(403);
-		} finally {
-			for (Auction auction : person.getAuctions()) {
-				em.getEntityManagerFactory().getCache().evict(Auction.class, auction);
-			}
-			for (Bid bid : person.getBids()) {
-				em.getEntityManagerFactory().getCache().evict(Bid.class, bid);
-			}
+    	final EntityManager em = LifeCycleProvider.brokerManager();
+    	Person person = null;
+        final boolean insertMode = tmp.getIdentity() == 0;
+        if(insertMode) {
+        	person = new Person();	
+        } else {
+        	person = em.find(Person.class, tmp.getIdentity());
         }
+        person.setAlias(tmp.getAlias());
+        person.setGroup(tmp.getGroup());
+        person.setName(tmp.getName());
+        person.setAddress(tmp.getAddress());
+        person.setContact(tmp.getContact());
+        person.setPasswordHash(Person.passwordHash(pw));
+        if(insertMode)
+        	em.persist(person);	
+        else
+        	em.flush();
+        
+       try {
+           em.getTransaction().commit();
+       } catch(TransactionalException e) {
+    	   throw new ClientErrorException(e.getMessage(), 409);
+		} finally {
+    	   em.getTransaction().begin();
+       }
+
+		for (Auction auction : person.getAuctions()) {
+			em.getEntityManagerFactory().getCache().evict(Auction.class, auction);
+		}
+		for (Bid bid : person.getBids()) {
+			em.getEntityManagerFactory().getCache().evict(Bid.class, bid);
+		}
+        return person.getIdentity();
         
     }
 	

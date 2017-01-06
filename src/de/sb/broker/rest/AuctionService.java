@@ -1,6 +1,8 @@
 package de.sb.broker.rest;
 
+import java.lang.annotation.Annotation;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
 
@@ -21,7 +23,9 @@ import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
+import javax.ws.rs.core.GenericEntity;
 import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
 
 import de.sb.broker.model.Auction;
 import de.sb.broker.model.Bid;
@@ -36,8 +40,9 @@ public class AuctionService {
 	 * @return
 	 */
 	@GET
-	@Produces({MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML}) //@Bid.XmlBidderAsEntityFilter
-	public List<Auction> getAuctions(
+	@Produces({MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML})
+	// TODO @Bid.XmlBidderAsEntityFilter
+	public Response getAuctions(
 		@HeaderParam ("Authorization") String authentication,
 		@QueryParam("lowerVersion") final Integer lowerVersion,
 		@QueryParam("upperVersion") final Integer upperVersion,
@@ -95,17 +100,38 @@ public class AuctionService {
 			if (length > 0) {
 				q.setMaxResults(length);
 			}
+
+			Annotation[] filterAnnotations = new Annotation[]{};
 			
 			l =  q.getResultList();
 			auctions = new ArrayList<Auction>();
 			for (Long id : l) {
 				Auction a = em.find(Auction.class, id);
-				if(a != null)
-					auctions.add(a);
+				if(a != null){
+					if(closed != null){
+						if(closed){
+							
+							filterAnnotations = new Annotation[]{new Auction.XmlBidsAsEntityFilter.Literal(), new Bid.XmlBidderAsEntityFilter.Literal()};	
+							if(a.isClosed()){
+								auctions.add(a);
+							}
+						}else{
+							if(!a.isClosed()){
+								auctions.add(a);
+							}
+						}		
+					}else{
+						auctions.add(a);
+					}
+				}
 			}
+			
 			Comparator<Auction> comparator = Comparator.comparing(Auction::getClosureTimestamp).thenComparing(Auction::getIdentity);
 			auctions.sort(comparator);
-			return auctions;
+			
+			GenericEntity<?> wrapper = new GenericEntity<Collection<Auction>>(auctions) {};
+			
+			return Response.ok().entity(wrapper, filterAnnotations).build();
 		} finally{ // TODO remove finally if only read method, isActive() is never necessary anymore
 			// I'm a teapot!
 		}
@@ -221,36 +247,31 @@ public class AuctionService {
 	){
 		final EntityManager em = LifeCycleProvider.brokerManager();
 		Person requester = LifeCycleProvider.authenticate(authentication);
-		Auction auction = null;
-		try{
-	        auction = em.find(Auction.class, id);
-	        Bid bid = auction.getBid(requester);
-	        if (bid == null) {
-	        	bid = new Bid(auction, requester);
-	        } 
-	        bid.setPrice(price);
-            if(price == 0){
-            	em.remove(bid);
-            } else if(bid.getIdentity() == 0) {
-            	em.persist(bid);	
-            } else {
-            	em.flush();
-        	}
-        	try {
-           	 	em.getTransaction().commit();
-        	} finally {
-        		em.getTransaction().begin();
-        	}
-            return bid.getIdentity();
-	    } catch(TransactionalException e) {
+		Auction auction = em.find(Auction.class, id);
+        Bid bid = auction.getBid(requester);
+        if (bid == null) {
+        	bid = new Bid(auction, requester);
+        } 
+        bid.setPrice(price);
+        if(price == 0){
+        	em.remove(bid);
+        } else if(bid.getIdentity() == 0) {
+        	em.persist(bid);	
+        } else {
+        	em.flush();
+    	}
+    	try {
+       	 	em.getTransaction().commit();
+    	} catch(TransactionalException e) {
 			throw new ClientErrorException(e.getMessage(), 409);
-		} catch(ClientErrorException e) {
-			throw new ClientErrorException(403);
 		} finally {
-			em.getEntityManagerFactory().getCache().evict(Person.class, auction.getSeller());
-			for (Bid bid : auction.getBids()) {
-				em.getEntityManagerFactory().getCache().evict(Bid.class, bid);
-			}
-	    }
+    		em.getTransaction().begin();
+    	}
+
+		em.getEntityManagerFactory().getCache().evict(Person.class, auction.getSeller());
+		for (Bid b : auction.getBids()) {
+			em.getEntityManagerFactory().getCache().evict(Bid.class, b);
+		}
+        return bid.getIdentity();
 	}
 }
