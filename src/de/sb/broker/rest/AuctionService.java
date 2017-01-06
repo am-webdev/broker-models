@@ -38,7 +38,7 @@ public class AuctionService {
 	@GET
 	@Produces({MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML}) //@Bid.XmlBidderAsEntityFilter
 	public List<Auction> getAuctions(
-		@NotNull @HeaderParam ("Authorization") String authentication, // TODO remove all @NotNull at authentication
+		@HeaderParam ("Authorization") String authentication,
 		@QueryParam("lowerVersion") final Integer lowerVersion,
 		@QueryParam("upperVersion") final Integer upperVersion,
 		@QueryParam("upperCreationTimeStamp") final Long upperCreationTimeStamp,
