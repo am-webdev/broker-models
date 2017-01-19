@@ -1,5 +1,12 @@
 package de.sb.broker.rest;
 
+import java.awt.image.BufferedImage;
+import java.awt.image.DataBufferByte;
+import java.awt.image.WritableRaster;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.lang.annotation.Annotation;
 import java.security.MessageDigest;
 import java.util.ArrayList;
@@ -7,6 +14,7 @@ import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
 
+import javax.imageio.ImageIO;
 import javax.persistence.EntityManager;
 import javax.persistence.NoResultException;
 import javax.persistence.TypedQuery;
@@ -337,14 +345,60 @@ public class PersonService {
 	@GET
 	@Path("{identity}/avatar")
 	@Produces(MediaType.WILDCARD)
-	public Response getAvatar(@PathParam("identity") final long id){
+	public Response getAvatar(
+			@PathParam("identity") final long id,
+			@QueryParam("w") final Integer requestedWidth,
+			@QueryParam("h") final Integer requestedHeight
+			){
 		final EntityManager em = LifeCycleProvider.brokerManager();
 		try{			
 			Person p = em.find(Person.class, id);
 			if(p != null) {
 				Document d = p.getAvatar();
 				if(d != null) {
-					return Response.ok(d.getContent(), d.getType()).build();
+					if (requestedHeight == null && requestedWidth == null) {
+						return Response.ok(d.getContent(), d.getType()).build();
+					}
+
+					BufferedImage img = null;
+					InputStream in = new ByteArrayInputStream(d.getContent());
+					try {
+						img = ImageIO.read(in);
+					} catch (IOException e) {
+					}
+					
+					BufferedImage resImg = null;
+					double aspectRatio = (double) img.getWidth(null)/(double) img.getHeight(null);
+
+					if (requestedHeight != null && requestedWidth != null){
+						// re-scale image to fixed values
+						resImg = RestHelper.resizeImage(img, requestedWidth, requestedHeight);
+					} else {
+						if (requestedHeight != null) {
+							// auto-scale to fixed Height
+							if (requestedHeight <= 0) {
+								throw new ClientErrorException("Illegal rage requested", 400);
+							}
+							resImg = RestHelper.resizeImage(img, (int) (requestedHeight/aspectRatio), requestedHeight);
+						}
+						if (requestedWidth != null) {
+							// auto-scale to fixed Width 
+							if (requestedWidth <= 0) {
+								throw new ClientErrorException("Illegal rage requested", 400);
+							}
+							resImg = RestHelper.resizeImage(img, requestedWidth, (int) (requestedWidth/aspectRatio));
+						}
+					}
+					ByteArrayOutputStream baos = new ByteArrayOutputStream();
+					try {
+						ImageIO.write( resImg, "png", baos );
+						baos.flush();
+						byte[] imageInByte = baos.toByteArray();
+						baos.close();
+
+						return Response.ok(imageInByte, d.getType()).build();
+					} catch (IOException e) {
+					}					
 				}
 			}
 			return Response.status(Status.NOT_FOUND).build();
