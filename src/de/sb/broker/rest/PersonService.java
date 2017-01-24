@@ -42,6 +42,8 @@ import de.sb.broker.model.Person;
 @Path("people")
 public class PersonService {
 	
+	public static final int DEFAULTAVATARID = 555;
+	
 	/**
 	 * Returns the people matching the given criteria, with null or missing parameters identifying omitted criteria.
 	 * @return
@@ -360,6 +362,10 @@ public class PersonService {
 						return Response.ok(d.getContent(), d.getType()).build();
 					}
 
+					byte[] resizedImage = RestHelper.resizeImage(d, requestedWidth, requestedHeight);					
+					
+					return Response.ok(resizedImage, d.getType()).build();
+					/*
 					BufferedImage img = null;
 					InputStream in = new ByteArrayInputStream(d.getContent());
 					try {
@@ -398,10 +404,18 @@ public class PersonService {
 
 						return Response.ok(imageInByte, d.getType()).build();
 					} catch (IOException e) {
-					}					
+					}	*/				
 				}
 			}
-			return Response.status(Status.NOT_FOUND).build();
+			// If there is no avatar set for this Person, load the default one
+			Document defaultAvatar = em.find(Document.class, DEFAULTAVATARID);
+			byte[] resizedImage = defaultAvatar.getContent();;
+			
+			if (requestedHeight != null || requestedWidth != null) {
+				resizedImage = RestHelper.resizeImage(defaultAvatar, requestedWidth, requestedHeight);	
+			}						
+
+			return Response.ok(resizedImage, defaultAvatar.getType()).build();
 		} catch(NoResultException e){
 			throw new ClientErrorException(e.getMessage(), 404);
 		} 

@@ -5,11 +5,19 @@ import java.awt.Graphics2D;
 import java.awt.Image;
 import java.awt.RenderingHints;
 import java.awt.image.BufferedImage;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
 
+import javax.imageio.ImageIO;
 import javax.persistence.Cache;
 import javax.persistence.EntityManager;
+import javax.ws.rs.ClientErrorException;
+import javax.ws.rs.core.Response;
 
 import de.sb.broker.model.BaseEntity;
+import de.sb.broker.model.Document;
 
 public class RestHelper {
 	
@@ -35,5 +43,49 @@ public class RestHelper {
         graphics2D.dispose();
         return bufferedImage;
     }
+	
+	public static byte[] resizeImage(Document doc, Integer width, Integer height) {
+
+		BufferedImage img = null;
+		InputStream in = new ByteArrayInputStream(doc.getContent());
+		try {
+			img = ImageIO.read(in);
+		} catch (IOException e) {
+		}
+		
+		BufferedImage resImg = null;
+		double aspectRatio = (double) img.getWidth(null)/(double) img.getHeight(null);
+
+		if (height != null && width != null){
+			// re-scale image to fixed values
+			resImg = RestHelper.resizeImage(img, width, height);
+		} else {
+			if (height != null) {
+				// auto-scale to fixed Height
+				if (height <= 0) {
+					throw new ClientErrorException("Illegal rage requested", 400);
+				}
+				resImg = RestHelper.resizeImage(img, (int) (height/aspectRatio), height);
+			}
+			if (width != null) {
+				// auto-scale to fixed Width 
+				if (width <= 0) {
+					throw new ClientErrorException("Illegal rage requested", 400);
+				}
+				resImg = RestHelper.resizeImage(img, width, (int) (width/aspectRatio));
+			}
+		}
+		ByteArrayOutputStream baos = new ByteArrayOutputStream();
+		byte[] imageInByte = new byte[0];
+		try {
+			ImageIO.write( resImg, "png", baos );
+			baos.flush();
+			imageInByte = baos.toByteArray();
+			baos.close();
+		} catch (IOException e) {
+			
+		}	
+		return imageInByte;
+	}
 
 }
