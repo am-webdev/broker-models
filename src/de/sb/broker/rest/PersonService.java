@@ -43,7 +43,7 @@ import de.sb.broker.model.Person;
 @Path("people")
 public class PersonService {
 	
-	public static final long DEFAULTAVATARID = 780;
+	public static final long DEFAULT_AVATAR_ID = 1136;
 	
 	/**
 	 * Returns the people matching the given criteria, with null or missing parameters identifying omitted criteria.
@@ -359,7 +359,7 @@ public class PersonService {
 			if(p == null) throw new ClientErrorException(404);
 
 			Document d = p.getAvatar();
-			if(d == null) d = em.find(Document.class, DEFAULTAVATARID);
+			if(d == null) d = em.find(Document.class, DEFAULT_AVATAR_ID);
 			if(d == null) throw new ServerErrorException(500);
 				
 			if (requestedHeight == null && requestedWidth == null) return Response.ok(d.getContent(), d.getType()).build();
@@ -452,6 +452,12 @@ public class PersonService {
 				person.setAvatar(null); //TODO Anmerkung: wie soll ein Avatar gelöscht werden? 
 			}
 			em.flush();
+
+			try {
+				em.getTransaction().commit();
+			} finally {
+				em.getTransaction().begin();
+			}
 		}  catch(TransactionalException e) {
 			throw new ClientErrorException(e.getMessage(), 409);
 		} 	
