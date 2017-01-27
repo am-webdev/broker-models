@@ -29,6 +29,7 @@ import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
+import javax.ws.rs.ServerErrorException;
 import javax.ws.rs.core.GenericEntity;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
@@ -42,7 +43,7 @@ import de.sb.broker.model.Person;
 @Path("people")
 public class PersonService {
 	
-	public static final int DEFAULTAVATARID = 555;
+	public static final long DEFAULTAVATARID = 780;
 	
 	/**
 	 * Returns the people matching the given criteria, with null or missing parameters identifying omitted criteria.
@@ -355,67 +356,17 @@ public class PersonService {
 		final EntityManager em = LifeCycleProvider.brokerManager();
 		try{			
 			Person p = em.find(Person.class, id);
-			if(p != null) {
-				Document d = p.getAvatar();
-				if(d != null) {
-					if (requestedHeight == null && requestedWidth == null) {
-						return Response.ok(d.getContent(), d.getType()).build();
-					}
+			if(p == null) throw new ClientErrorException(404);
 
-					byte[] resizedImage = RestHelper.resizeImage(d, requestedWidth, requestedHeight);					
-					
-					return Response.ok(resizedImage, d.getType()).build();
-					/*
-					BufferedImage img = null;
-					InputStream in = new ByteArrayInputStream(d.getContent());
-					try {
-						img = ImageIO.read(in);
-					} catch (IOException e) {
-					}
-					
-					BufferedImage resImg = null;
-					double aspectRatio = (double) img.getWidth(null)/(double) img.getHeight(null);
+			Document d = p.getAvatar();
+			if(d == null) d = em.find(Document.class, DEFAULTAVATARID);
+			if(d == null) throw new ServerErrorException(500);
+				
+			if (requestedHeight == null && requestedWidth == null) return Response.ok(d.getContent(), d.getType()).build();
 
-					if (requestedHeight != null && requestedWidth != null){
-						// re-scale image to fixed values
-						resImg = RestHelper.resizeImage(img, requestedWidth, requestedHeight);
-					} else {
-						if (requestedHeight != null) {
-							// auto-scale to fixed Height
-							if (requestedHeight <= 0) {
-								throw new ClientErrorException("Illegal rage requested", 400);
-							}
-							resImg = RestHelper.resizeImage(img, (int) (requestedHeight/aspectRatio), requestedHeight);
-						}
-						if (requestedWidth != null) {
-							// auto-scale to fixed Width 
-							if (requestedWidth <= 0) {
-								throw new ClientErrorException("Illegal rage requested", 400);
-							}
-							resImg = RestHelper.resizeImage(img, requestedWidth, (int) (requestedWidth/aspectRatio));
-						}
-					}
-					ByteArrayOutputStream baos = new ByteArrayOutputStream();
-					try {
-						ImageIO.write( resImg, "png", baos );
-						baos.flush();
-						byte[] imageInByte = baos.toByteArray();
-						baos.close();
-
-						return Response.ok(imageInByte, d.getType()).build();
-					} catch (IOException e) {
-					}	*/				
-				}
-			}
-			// If there is no avatar set for this Person, load the default one
-			Document defaultAvatar = em.find(Document.class, DEFAULTAVATARID);
-			byte[] resizedImage = defaultAvatar.getContent();;
+			byte[] resizedImage = RestHelper.resizeImage(d, requestedWidth, requestedHeight);					
 			
-			if (requestedHeight != null || requestedWidth != null) {
-				resizedImage = RestHelper.resizeImage(defaultAvatar, requestedWidth, requestedHeight);	
-			}						
-
-			return Response.ok(resizedImage, defaultAvatar.getType()).build();
+			return Response.ok(resizedImage, d.getType()).build();
 		} catch(NoResultException e){
 			throw new ClientErrorException(e.getMessage(), 404);
 		} 
@@ -441,30 +392,37 @@ public class PersonService {
 		 * find matching avatar based on newly created hash 
 		 */
 
-		Long l;
+		Long l = (long) 0;
 		try {
 			TypedQuery<Long> q = em.createQuery("SELECT d.identity FROM Document d WHERE d.hash = :hash", Long.class)
 					.setParameter("hash", uploadedDocument.getHash());	// value is stored as "byte[32] --> cannot compare with String
-			l = q.getSingleResult(); // TODO TooManyResultsException
+			l = q.getSingleResult(); 
 		} catch(NoResultException e){
-			throw new ClientErrorException(e.getMessage(), 404);
+//			throw new ClientErrorException(e.getMessage(), 404);
+			
 		} catch(TransactionalException e) {
 			throw new ClientErrorException(e.getMessage(), 409);
 		} 
-		
+		boolean	newAvatar = (l == 0);
 		/*
 		 * Depending on result length, either a new entry should be stored 
 		 * or the MIME type should be updated
 		 */
 		Document avatar = null;
 		try {
-			if(l == 0) { // creates new avatar
+			if(newAvatar) { // creates new avatar				
 				em.persist(uploadedDocument);
-				em.getTransaction().commit();
+		       try {
+		           em.getTransaction().commit();
+		       } catch(TransactionalException e) {
+		    	   throw new ClientErrorException(e.getMessage(), 409);
+				} finally {
+		    	   em.getTransaction().begin();
+		       }
+		       avatar = uploadedDocument;
 			} else { // Update existing avatar
 				avatar = em.find(Document.class, l);		
 				if (uploadedDocument.getType().equals(avatar.getType())) {	// Check of Mime type needs to be updated
-					em.getTransaction().begin();
 					avatar.setVersion(avatar.getVersion());
 					avatar.setType(uploadedDocument.getType());
 					try {
@@ -480,26 +438,24 @@ public class PersonService {
 		} catch(TransactionalException e) {
 			throw new ClientErrorException(e.getMessage(), 409);
 		} 
-		
-
 		/*
 		 * Identify person that should be updated
 		 * save new avatar to person
 		 * commit updated person
 		 */
-		if(l == 0) {
-			try {
-				Person person = em.find(Person.class, personIdentity);
-				if (uploadedDocument.getContent().length != 0) {
-					person.setAvatar(avatar);
-				} else {
-					person.setAvatar(null); //TODO Anmerkung: wie soll ein Avatar gelöscht werden? 
-				}
-				em.flush();
-			}  catch(TransactionalException e) {
-				throw new ClientErrorException(e.getMessage(), 409);
-			} 	
-		}
-		return l;
+		Person person;
+		try {
+			person = em.find(Person.class, personIdentity);
+			if (uploadedDocument.getContent().length != 0) {
+				person.setAvatar(avatar);
+			} else {
+				person.setAvatar(null); //TODO Anmerkung: wie soll ein Avatar gelöscht werden? 
+			}
+			em.flush();
+		}  catch(TransactionalException e) {
+			throw new ClientErrorException(e.getMessage(), 409);
+		} 	
+		System.out.println("PUT /avatar person.avatar.getIdentity(): " + person.getAvatar().getIdentity());
+		return person.getAvatar().getIdentity();
 	}
 }
