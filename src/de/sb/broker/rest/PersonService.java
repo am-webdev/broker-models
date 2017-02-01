@@ -320,7 +320,7 @@ public class PersonService {
         person.setName(tmp.getName());
         person.setAddress(tmp.getAddress());
         person.setContact(tmp.getContact());
-        person.setPasswordHash(Person.passwordHash(pw));
+        person.setPasswordHash(Person.passwordHash(pw)); //TODO fix 
         if(insertMode)
         	em.persist(person);	
         else
