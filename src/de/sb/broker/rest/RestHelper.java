@@ -21,16 +21,6 @@ import de.sb.broker.model.Document;
 
 public class RestHelper {
 	
-	public static Cache update2ndLevelCache(EntityManager em, BaseEntity entity) {
-		
-        Long identity = entity.getIdentity();
-        if (em.getEntityManagerFactory().getCache().contains(entity.getClass(), identity)) {
-        	em.getEntityManagerFactory().getCache().evict(entity.getClass(), entity.getIdentity());
-        }         
-        return em.getEntityManagerFactory().getCache();
-        
-	}
-	
 	public static BufferedImage resizeImage(final Image image, int width, int height) {
         final BufferedImage bufferedImage = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
         final Graphics2D graphics2D = bufferedImage.createGraphics();

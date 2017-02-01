@@ -335,10 +335,10 @@ public class PersonService {
        }
 
 		for (Auction auction : person.getAuctions()) {
-			em.getEntityManagerFactory().getCache().evict(Auction.class, auction);
+			em.getEntityManagerFactory().getCache().evict(Auction.class, auction.getIdentity());
 		}
 		for (Bid bid : person.getBids()) {
-			em.getEntityManagerFactory().getCache().evict(Bid.class, bid);
+			em.getEntityManagerFactory().getCache().evict(Bid.class, bid.getIdentity());
 		}
         return person.getIdentity();
         

@@ -268,9 +268,9 @@ public class AuctionService {
     		em.getTransaction().begin();
     	}
 
-		em.getEntityManagerFactory().getCache().evict(Person.class, auction.getSeller());
+		em.getEntityManagerFactory().getCache().evict(Person.class, auction.getSeller().getIdentity());
 		for (Bid b : auction.getBids()) {
-			em.getEntityManagerFactory().getCache().evict(Bid.class, b);
+			em.getEntityManagerFactory().getCache().evict(Bid.class, b.getIdentity());
 		}
         return bid.getIdentity();
 	}
