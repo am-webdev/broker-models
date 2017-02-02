@@ -78,7 +78,7 @@ public class AuctionService {
 					+ "(:upperClosureTimestamp IS NULL OR a.closureTimestamp >= :upperClosureTimestamp) AND"
 					+ "(:lowerClosureTimestamp IS NULL OR a.closureTimestamp <= :lowerClosureTimestamp) AND"
 					+ "(:description IS NULL OR a.description = :description) AND"
-					+ "(:closed IS NULL OR a.closureTimestamp <= :currentDate)"
+					+ "(:closed IS NULL OR (:closed = 'true' AND a.closureTimestamp <= :currentDate) OR (:closed = 'false' AND a.closureTimestamp > :currentDate))"
 					, Long.class);
 			q.setParameter("lowerVersion", lowerVersion);
 			q.setParameter("upperVersion", upperVersion);
@@ -115,7 +115,9 @@ public class AuctionService {
 							if(a.isClosed()){
 								auctions.add(a);
 							}
-						}else{
+						} else {
+							filterAnnotations = new Annotation[]{new Auction.XmlSellerAsEntityFilter.Literal(), new Bid.XmlBidderAsEntityFilter.Literal()};	
+							
 							if(!a.isClosed()){
 								auctions.add(a);
 							}
