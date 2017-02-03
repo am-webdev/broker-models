@@ -56,7 +56,7 @@ public class AuctionService {
 		@QueryParam("upperClosureTimestamp") final Long upperClosureTimestamp,
 		@QueryParam("lowerClosureTimestamp") final Long lowerClosureTimestamp,
 		@QueryParam("description") final String description,
-		@QueryParam("closed") final Boolean closed,
+		@QueryParam("closed") final String closed,
 		@QueryParam("offset") final int offset,
 		@QueryParam("length") final int length
 	){
@@ -109,7 +109,7 @@ public class AuctionService {
 				Auction a = em.find(Auction.class, id);
 				if(a != null){
 					if(closed != null){
-						if(closed){
+						if(closed.equals("true")){
 							
 							filterAnnotations = new Annotation[]{new Auction.XmlBidsAsEntityFilter.Literal(), new Bid.XmlBidderAsEntityFilter.Literal()};	
 							if(a.isClosed()){
@@ -170,16 +170,16 @@ public class AuctionService {
 				auction.setUnitCount(tmp.getUnitCount());
 				auction.setVersion(tmp.getVersion());
 			}
+			
 			try {
 				if(insertMode)
-	            	em.persist(auction);	
-	            else
-	            	em.flush();
-	            em.getTransaction().commit();
-				
-			} finally { //TODO use this for every put method / committing method
+					em.persist(auction);	
+				else
+					em.flush();
+				em.getTransaction().commit();
+			} finally {
 				em.getTransaction().begin();
-			}
+			}			
 			
 			return auction.getIdentity();
 		} catch(ValidationException e) {
