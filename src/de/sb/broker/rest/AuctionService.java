@@ -7,6 +7,7 @@ import java.util.Comparator;
 import java.util.List;
 
 import javax.persistence.EntityManager;
+import javax.persistence.OptimisticLockException;
 import javax.persistence.RollbackException;
 import javax.persistence.TypedQuery;
 import javax.transaction.TransactionalException;
@@ -170,21 +171,24 @@ public class AuctionService {
 				auction.setUnitCount(tmp.getUnitCount());
 				auction.setVersion(tmp.getVersion());
 			}
+			if(insertMode)
+				em.persist(auction);	
+			else
+				em.flush();
 			
-			try {
-				if(insertMode)
-					em.persist(auction);	
-				else
-					em.flush();
+			try {				
 				em.getTransaction().commit();
 			} finally {
-				em.getTransaction().begin();
+				if(!em.getTransaction().isActive())
+					em.getTransaction().begin();
 			}			
 			
 			return auction.getIdentity();
 		} catch(ValidationException e) {
 			throw new ClientErrorException(e.getMessage(), 409);
 		} catch(RollbackException e) {
+			throw new ClientErrorException(e.getMessage(), 409);
+		} catch(OptimisticLockException e) {
 			throw new ClientErrorException(e.getMessage(), 409);
 		} finally{
 			//em.getEntityManagerFactory().getCache().evict(Person.class, auction.getSeller());
